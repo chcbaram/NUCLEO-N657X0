@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="800" viewBox="0 0 960 800" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR','Apple SD Gothic Neo',sans-serif">
+  <rect width="960" height="800" fill="#fbfbfd"/>
+  <text x="30" y="40" font-size="22" font-weight="700" fill="#1a1a2e">NUCLEO-N657X0-Q (MB1940-C02) 부트 관련 결선</text>
+  <text x="30" y="63" font-size="13" fill="#6b7280">회로도 Sheet 3 / 5 / 12 기준</text>
+
+  <!-- BOOT jumpers -->
+  <text x="30" y="100" font-size="15" font-weight="700" fill="#374151">부트 점퍼 (Sheet 12)</text>
+
+  <!-- JP1 -->
+  <rect x="30" y="114" width="440" height="150" rx="8" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="48" y="138" font-size="13.5" font-weight="700" fill="#1d4ed8">JP1 → BOOT0 (전용 핀, 볼 G4)</text>
+  <line x1="70" y1="164" x2="70" y2="236" stroke="#9ca3af" stroke-width="2"/>
+  <circle cx="70" cy="170" r="6" fill="#ffffff" stroke="#4b5563" stroke-width="1.5"/>
+  <circle cx="70" cy="200" r="6" fill="#ffffff" stroke="#4b5563" stroke-width="1.5"/>
+  <circle cx="70" cy="230" r="6" fill="#ffffff" stroke="#4b5563" stroke-width="1.5"/>
+  <text x="88" y="175" font-size="12" fill="#1a1a2e">pin 3 — V_DDIO   → BOOT0 = 1</text>
+  <text x="88" y="205" font-size="12" fill="#1a1a2e">pin 2 — 공통 → 10 K (R15) → BOOT0</text>
+  <text x="88" y="235" font-size="12" fill="#1a1a2e">pin 1 — GND     → BOOT0 = 0</text>
+  <text x="48" y="256" font-size="11.5" fill="#6b7280">미장착 시 내부 풀다운(SYSCFG_BOOTCR.BOOT0_PD=0)으로 0</text>
+
+  <!-- JP2 -->
+  <rect x="490" y="114" width="440" height="150" rx="8" fill="#fef3c7" stroke="#fcd34d"/>
+  <text x="508" y="138" font-size="13.5" font-weight="700" fill="#92400e">JP2 → BOOT1 (PA6, 볼 P8)</text>
+  <line x1="530" y1="164" x2="530" y2="236" stroke="#9ca3af" stroke-width="2"/>
+  <circle cx="530" cy="170" r="6" fill="#ffffff" stroke="#4b5563" stroke-width="1.5"/>
+  <circle cx="530" cy="200" r="6" fill="#ffffff" stroke="#4b5563" stroke-width="1.5"/>
+  <circle cx="530" cy="230" r="6" fill="#ffffff" stroke="#4b5563" stroke-width="1.5"/>
+  <text x="548" y="175" font-size="12" fill="#1a1a2e">pin 3 — V_DDIO   → BOOT1 = 1</text>
+  <text x="548" y="205" font-size="12" fill="#1a1a2e">pin 2 — 공통 → 10 K (R30) → BOOT1</text>
+  <text x="548" y="235" font-size="12" fill="#1a1a2e">pin 1 — GND     → BOOT1 = 0</text>
+  <text x="508" y="256" font-size="11.5" fill="#6b7280">OTP19[28:21] 로 다른 포트/핀으로 변경 가능</text>
+
+  <!-- truth table -->
+  <text x="30" y="298" font-size="15" font-weight="700" fill="#374151">부트 모드 진리표</text>
+  <rect x="30" y="310" width="900" height="26" fill="#e5e7eb"/>
+  <g font-size="12.5" font-weight="700" fill="#374151">
+    <text x="46" y="328">BOOT0 (JP1)</text><text x="190" y="328">BOOT1 (JP2)</text><text x="340" y="328">모드</text><text x="560" y="328">동작</text>
+  </g>
+  <rect x="30" y="336" width="900" height="30" fill="#fef3c7"/>
+  <text x="46" y="356" font-size="12.5" fill="#78350f">무관</text><text x="190" y="356" font-size="12.5" font-weight="700" fill="#92400e">1</text>
+  <text x="340" y="356" font-size="12.5" font-weight="700" fill="#92400e">Development boot</text>
+  <text x="560" y="356" font-size="12.5" fill="#78350f">디버그 재개방 후 무한루프. 디버거로 SRAM 직접 로드</text>
+  <rect x="30" y="366" width="900" height="30" fill="#dbeafe"/>
+  <text x="46" y="386" font-size="12.5" font-weight="700" fill="#1e40af">0</text><text x="190" y="386" font-size="12.5" fill="#1e3a8a">0</text>
+  <text x="340" y="386" font-size="12.5" font-weight="700" fill="#1e40af">Flash boot</text>
+  <text x="560" y="386" font-size="12.5" fill="#1e3a8a">XSPI2 NOR 에서 FSBL 로드 (기본 부트 소스)</text>
+  <rect x="30" y="396" width="900" height="30" fill="#dcfce7"/>
+  <text x="46" y="416" font-size="12.5" font-weight="700" fill="#166534">1</text><text x="190" y="416" font-size="12.5" fill="#15803d">0</text>
+  <text x="340" y="416" font-size="12.5" font-weight="700" fill="#166534">Serial boot</text>
+  <text x="560" y="416" font-size="12.5" fill="#15803d">USB HS DFU / USART1, USART2, UART4</text>
+
+  <!-- flash -->
+  <text x="30" y="462" font-size="15" font-weight="700" fill="#374151">부트 플래시 (Sheet 5)</text>
+  <rect x="30" y="474" width="440" height="140" rx="8" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="48" y="498" font-size="13.5" font-weight="700" fill="#6d28d9">MX25UM51245GXDI00 (U31)</text>
+  <text x="48" y="520" font-size="12" fill="#5b21b6">512 Mb / 64 MB Octal NOR, 1.8 V</text>
+  <text x="48" y="540" font-size="12" fill="#5b21b6">전원 VDD_OCTO2_M ← V_DDA1V8 (SB21) → OTP11[30] xspi_3v3 = 0</text>
+  <text x="48" y="560" font-size="12" fill="#5b21b6">PN0..PN11 = XSPIM_P2 (데이터시트에 (boot) 표기된 포트)</text>
+  <text x="48" y="580" font-size="12" fill="#5b21b6">메모리 맵 베이스 0x7000_0000</text>
+  <text x="48" y="602" font-size="12" font-weight="600" fill="#6d28d9">ROM 검색 위치: FSBL1 @ +0x0, FSBL2 @ +0x4_0000</text>
+
+  <rect x="490" y="474" width="440" height="140" rx="8" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="508" y="498" font-size="13.5" font-weight="700" fill="#047857">권장 플래시 레이아웃</text>
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#065f46">
+    <text x="508" y="522">0x7000_0000   FSBL1 (서명본)</text>
+    <text x="508" y="542">0x7004_0000   FSBL2 (백업, 선택)</text>
+    <text x="508" y="562">0x7010_0000   Application (서명본)</text>
+  </g>
+  <text x="508" y="586" font-size="12" fill="#047857">FSBL1 인증 실패 → FSBL2 시도 → 그래도 실패면</text>
+  <text x="508" y="604" font-size="12" fill="#047857">serial boot 로 폴백한다</text>
+
+  <!-- power / reset / debug -->
+  <text x="30" y="650" font-size="15" font-weight="700" fill="#374151">기타 부트 관련 핀</text>
+  <rect x="30" y="662" width="900" height="26" fill="#e5e7eb"/>
+  <g font-size="12.5" font-weight="700" fill="#374151">
+    <text x="46" y="680">신호</text><text x="200" y="680">핀 / 볼</text><text x="330" y="680">보드 결선</text><text x="640" y="680">부팅에서의 역할</text>
+  </g>
+  <g font-size="12">
+    <rect x="30" y="688" width="900" height="24" fill="#ffffff"/>
+    <text x="46" y="705" font-weight="600">PWR_ON</text><text x="200" y="705" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">E2</text><text x="330" y="705" fill="#4b5563">U14 / U34 / U26 / U17 의 EN</text><text x="640" y="705" fill="#4b5563">POR 통과 후 1.8 V 레일 인에이블</text>
+    <rect x="30" y="712" width="900" height="24" fill="#f9fafb"/>
+    <text x="46" y="729" font-weight="600">NRST</text><text x="200" y="729" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">G3</text><text x="330" y="729" fill="#4b5563">B2 버튼 + C80 10 nF + ESD</text><text x="640" y="729" fill="#4b5563">핀 리셋 → OTP_LD 재수행</text>
+    <rect x="30" y="736" width="900" height="24" fill="#fee2e2"/>
+    <text x="46" y="753" font-weight="700" fill="#991b1b">PG10</text><text x="200" y="753" font-family="ui-monospace,Menlo,monospace" fill="#991b1b">T10</text><text x="330" y="753" fill="#991b1b">LED2 = LD5 (RED)</text><text x="640" y="753" fill="#991b1b" font-weight="600">ROM 블로킹 실패 로그 (UART5_TX, 9600 bps)</text>
+    <rect x="30" y="760" width="900" height="24" fill="#f9fafb"/>
+    <text x="46" y="777" font-weight="600">PB12</text><text x="200" y="777" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">R10</text><text x="330" y="777" fill="#4b5563">EXT_SMPS_MODE</text><text x="640" y="777" fill="#4b5563">외부 SMPS(TPS62088) 사용 시 모드 제어</text>
+  </g>
+</svg>

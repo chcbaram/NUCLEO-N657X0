@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1210" viewBox="0 0 960 1210" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR','Apple SD Gothic Neo',sans-serif">
+  <defs>
+    <marker id="ar" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="#6b7280"/>
+    </marker>
+    <marker id="arR" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="#dc2626"/>
+    </marker>
+  </defs>
+  <rect width="960" height="1210" fill="#fbfbfd"/>
+  <text x="30" y="42" font-size="22" font-weight="700" fill="#1a1a2e">STM32N657X0 부팅 시퀀스</text>
+  <text x="30" y="66" font-size="13" fill="#6b7280">전원 인가 → BootROM(HDPL0) → FSBL(SRAM) → Application</text>
+
+  <!-- ===== Stage A : hardware ===== -->
+  <rect x="30" y="88" width="900" height="266" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="48" y="114" font-size="15" font-weight="700" fill="#1d4ed8">A. 하드웨어 리셋 시퀀스 (PWR + RCC + BSEC)</text>
+  <text x="820" y="114" font-size="12" fill="#6b7280">RM0486 §13.4.1 / §14.5</text>
+
+  <rect x="48" y="128" width="196" height="52" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="60" y="150" font-size="13" font-weight="600" fill="#1a1a2e">1. POR 감시</text>
+  <text x="60" y="169" font-size="11.5" fill="#4b5563">V_DD / V_DDA18AON &gt; V_POR</text>
+
+  <rect x="268" y="128" width="196" height="52" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="280" y="150" font-size="13" font-weight="600" fill="#1a1a2e">2. PWR_ON 출력</text>
+  <text x="280" y="169" font-size="11.5" fill="#4b5563">외부 1.8V 레귤레이터 EN</text>
+
+  <rect x="488" y="128" width="196" height="52" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="500" y="150" font-size="13" font-weight="600" fill="#1a1a2e">3. SMPS 기동</text>
+  <text x="500" y="169" font-size="11.5" fill="#4b5563">V_DDCORE = 0.8 V (VOS low)</text>
+
+  <rect x="708" y="128" width="204" height="52" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="720" y="150" font-size="13" font-weight="600" fill="#1a1a2e">4. Vddcore_ok</text>
+  <text x="720" y="169" font-size="11.5" fill="#4b5563">HSI / HSIS 기동</text>
+
+  <line x1="244" y1="154" x2="266" y2="154" stroke="#6b7280" marker-end="url(#ar)"/>
+  <line x1="464" y1="154" x2="486" y2="154" stroke="#6b7280" marker-end="url(#ar)"/>
+  <line x1="684" y1="154" x2="706" y2="154" stroke="#6b7280" marker-end="url(#ar)"/>
+
+  <rect x="48" y="206" width="290" height="52" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="60" y="228" font-size="13" font-weight="600" fill="#1a1a2e">5. 메모리 리페어 (MEM)</text>
+  <text x="60" y="247" font-size="11.5" fill="#4b5563">hardware system init 완료 대기</text>
+
+  <rect x="362" y="206" width="290" height="52" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="374" y="228" font-size="13" font-weight="600" fill="#1a1a2e">6. OTP 옵션바이트 로드</text>
+  <text x="374" y="247" font-size="11.5" fill="#4b5563">BSEC → fuse_ok</text>
+
+  <rect x="676" y="206" width="236" height="52" rx="6" fill="#dcfce7" stroke="#4ade80"/>
+  <text x="688" y="228" font-size="13" font-weight="600" fill="#166534">7. sys_rst 해제</text>
+  <text x="688" y="247" font-size="11.5" fill="#166534">CPU fetch 시작</text>
+
+  <line x1="338" y1="232" x2="360" y2="232" stroke="#6b7280" marker-end="url(#ar)"/>
+  <line x1="652" y1="232" x2="674" y2="232" stroke="#6b7280" marker-end="url(#ar)"/>
+
+  <rect x="48" y="276" width="864" height="62" rx="6" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="62" y="298" font-size="12.5" font-weight="600" fill="#9a3412">리셋 소스별 생략 단계</text>
+  <text x="62" y="318" font-size="11.5" fill="#7c2d12">NRST 핀 리셋: 1~3 단축(V_DD 유지), OTP_LD 재수행  ·  Stop 복귀: REG→VOS1 + HSI/MSI만  ·  Standby 복귀: BootROM 미실행 → SYSCFG_INITSVTORCR 주소로 직행</text>
+
+  <line x1="480" y1="354" x2="480" y2="382" stroke="#6b7280" marker-end="url(#ar)"/>
+
+  <!-- ===== Stage B : BootROM ===== -->
+  <rect x="30" y="386" width="900" height="470" rx="10" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="48" y="412" font-size="15" font-weight="700" fill="#6d28d9">B. BootROM 실행  ·  0x1800_0000 (128 KB, secure)  ·  HDPL0</text>
+  <text x="800" y="412" font-size="12" fill="#6b7280">UM3234 §2.2 / §3.2</text>
+
+  <rect x="48" y="426" width="410" height="46" rx="6" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="60" y="447" font-size="12.5" font-weight="600" fill="#1a1a2e">B1. System init</text>
+  <text x="60" y="464" font-size="11.5" fill="#4b5563">벡터/SAU 8영역 · MPU_S · RISAF3 7영역 · ICACHE ON</text>
+
+  <rect x="482" y="426" width="430" height="46" rx="6" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="494" y="447" font-size="12.5" font-weight="600" fill="#1a1a2e">B2. 리셋 원인 / 탬퍼 / 라이프사이클 판정</text>
+  <text x="494" y="464" font-size="11.5" fill="#4b5563">RCC_HWRSR · potential tamper 보호 ON · BSEC fuses</text>
+
+  <rect x="48" y="486" width="864" height="46" rx="6" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="60" y="507" font-size="12.5" font-weight="600" fill="#1a1a2e">B3. 부트 설정 결정 — SYSCFG_BOOTSR[1:0] 래치값 + OTP11[8:5] flash_boot_source</text>
+  <text x="60" y="524" font-size="11.5" fill="#4b5563">BOOT1 검사가 BOOT0보다 우선. BOOT1 = PA6 (OTP19로 변경 가능)</text>
+
+  <!-- three branches -->
+  <line x1="200" y1="532" x2="200" y2="556" stroke="#6b7280" marker-end="url(#ar)"/>
+  <line x1="480" y1="532" x2="480" y2="556" stroke="#6b7280" marker-end="url(#ar)"/>
+  <line x1="762" y1="532" x2="762" y2="556" stroke="#6b7280" marker-end="url(#ar)"/>
+
+  <rect x="48" y="560" width="288" height="86" rx="6" fill="#dbeafe" stroke="#60a5fa"/>
+  <text x="60" y="582" font-size="12.5" font-weight="700" fill="#1e40af">Flash boot — BOOT0=0, BOOT1=0</text>
+  <text x="60" y="601" font-size="11.5" fill="#1e3a8a">XSPI NOR(기본) / HyperFlash / eMMC / SD</text>
+  <text x="60" y="619" font-size="11.5" fill="#1e3a8a">sNOR: FSBL1 @0x0, FSBL2 @0x4_0000</text>
+  <text x="60" y="637" font-size="11.5" fill="#1e3a8a">XSPIM_P2 (보드: MX25UM51245G)</text>
+
+  <rect x="336" y="560" width="288" height="86" rx="6" fill="#dbeafe" stroke="#60a5fa"/>
+  <text x="348" y="582" font-size="12.5" font-weight="700" fill="#1e40af">Serial boot — BOOT0=1, BOOT1=0</text>
+  <text x="348" y="601" font-size="11.5" fill="#1e3a8a">USB 2.0 HS (DFU 1.1)</text>
+  <text x="348" y="619" font-size="11.5" fill="#1e3a8a">USART1 / USART2 / UART4</text>
+  <text x="348" y="637" font-size="11.5" fill="#1e3a8a">STM32CubeProgrammer 프로토콜</text>
+
+  <rect x="624" y="560" width="288" height="86" rx="6" fill="#fef3c7" stroke="#fbbf24"/>
+  <text x="636" y="582" font-size="12.5" font-weight="700" fill="#92400e">Development boot — BOOT1=1</text>
+  <text x="636" y="601" font-size="11.5" fill="#78350f">디버그를 secure하게 재개방</text>
+  <text x="636" y="619" font-size="11.5" fill="#78350f">무한 루프로 종료 (FSBL 로드 없음)</text>
+  <text x="636" y="637" font-size="11.5" fill="#78350f">CLOSED_UNLOCKED 에서만 가능</text>
+
+  <line x1="192" y1="646" x2="192" y2="672" stroke="#6b7280" marker-end="url(#ar)"/>
+  <line x1="480" y1="646" x2="480" y2="672" stroke="#6b7280" marker-end="url(#ar)"/>
+
+  <rect x="48" y="676" width="576" height="46" rx="6" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="60" y="697" font-size="12.5" font-weight="600" fill="#1a1a2e">B4. 이미지 로드 → download buffer @ 0x3418_0000 (AXISRAM2 상위 512 KB)</text>
+  <text x="60" y="714" font-size="11.5" fill="#4b5563">헤더 0x400 + 페이로드. 최대 511 KB</text>
+
+  <rect x="48" y="736" width="576" height="46" rx="6" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="60" y="757" font-size="12.5" font-weight="600" fill="#1a1a2e">B5. Secure boot — 파라미터 검사 → 인증 → (복호) → 안티롤백</text>
+  <text x="60" y="774" font-size="11.5" fill="#4b5563">ECDSA P-256/P-384 · OTP17 활성키 · OTP20/21 단조 카운터</text>
+
+  <rect x="648" y="676" width="264" height="106" rx="6" fill="#fee2e2" stroke="#fca5a5"/>
+  <text x="660" y="698" font-size="12.5" font-weight="700" fill="#991b1b">인증 실패 시</text>
+  <text x="660" y="717" font-size="11.5" fill="#7f1d1d">CLOSED_UNLOCKED: 그대로 진행</text>
+  <text x="660" y="735" font-size="11.5" fill="#7f1d1d">CLOSED_LOCKED: 버퍼 clear →</text>
+  <text x="660" y="753" font-size="11.5" fill="#7f1d1d">FSBL2 시도 → serial boot 폴백</text>
+  <text x="660" y="771" font-size="11.5" fill="#7f1d1d">BOOTFAILN LED + PG10 9600bps</text>
+  <line x1="624" y1="759" x2="646" y2="759" stroke="#dc2626" marker-end="url(#arR)"/>
+
+  <rect x="48" y="796" width="864" height="46" rx="6" fill="#dcfce7" stroke="#4ade80"/>
+  <text x="60" y="817" font-size="12.5" font-weight="700" fill="#166534">B6. 점프 — r0 = boot context 주소(0x3410_0000), 헤더의 Image entry point 로 분기</text>
+  <text x="60" y="834" font-size="11.5" fill="#166534">ROM은 BSEC_UNMAPR ← 0xB9D8_FF1F 로 자기 자신을 부분 은닉, potential tamper 보호 해제</text>
+
+  <line x1="480" y1="856" x2="480" y2="884" stroke="#6b7280" marker-end="url(#ar)"/>
+
+  <!-- ===== Stage C : FSBL ===== -->
+  <rect x="30" y="888" width="900" height="140" rx="10" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="48" y="914" font-size="15" font-weight="700" fill="#047857">C. FSBL 실행  ·  0x3418_0400 (AXISRAM2)  ·  secure state</text>
+  <text x="48" y="940" font-size="12" fill="#065f46">클럭(PLL) · MPU · I/D캐시 · 전원(VOS) · 외부 메모리 컨트롤러 초기화가 FSBL 책임</text>
+
+  <rect x="48" y="952" width="430" height="60" rx="6" fill="#ffffff" stroke="#6ee7b7"/>
+  <text x="60" y="973" font-size="12.5" font-weight="700" fill="#065f46">LRUN (Load &amp; Run)</text>
+  <text x="60" y="991" font-size="11.5" fill="#047857">앱 이미지를 0x7010_0000 → 0x3400_0000 복사</text>
+  <text x="60" y="1006" font-size="11.5" fill="#047857">엔트리 0x3400_0400 (앱도 0x400 헤더)</text>
+
+  <rect x="490" y="952" width="422" height="60" rx="6" fill="#ffffff" stroke="#6ee7b7"/>
+  <text x="502" y="973" font-size="12.5" font-weight="700" fill="#065f46">XIP (Execute In Place)</text>
+  <text x="502" y="991" font-size="11.5" fill="#047857">XSPI2를 memory-mapped 모드로 설정</text>
+  <text x="502" y="1006" font-size="11.5" fill="#047857">엔트리 0x7010_0400 에서 직접 실행</text>
+
+  <line x1="480" y1="1028" x2="480" y2="1054" stroke="#6b7280" marker-end="url(#ar)"/>
+  <rect x="330" y="1058" width="300" height="42" rx="8" fill="#1a1a2e"/>
+  <text x="480" y="1084" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">Application</text>
+
+  <text x="30" y="1140" font-size="11.5" fill="#6b7280">HDPL(temporal isolation): 0 = BootROM → 1 = uRoT/FSBL → 2 → 3. BSEC_HDPLSR 단조 증가, 되돌릴 수 없음.</text>
+  <text x="30" y="1160" font-size="11.5" fill="#6b7280">출처: RM0486 Rev4 §3, §9, §13, §14  ·  UM3234 Rev5  ·  STM32CubeN6 (NUCLEO-N657X0-Q Templates)</text>
+  <text x="30" y="1180" font-size="11.5" fill="#6b7280">보드: NUCLEO-N657X0-Q / MB1940-C02</text>
+</svg>

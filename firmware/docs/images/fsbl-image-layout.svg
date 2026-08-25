@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="820" viewBox="0 0 960 820" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR','Apple SD Gothic Neo',sans-serif">
+  <rect width="960" height="820" fill="#fbfbfd"/>
+  <text x="30" y="40" font-size="22" font-weight="700" fill="#1a1a2e">STM32 이미지 헤더 v2.3 (FSBL / Application 공통)</text>
+  <text x="30" y="63" font-size="13" fill="#6b7280">STM32_SigningTool_CLI -hv 2.3 가 붙이는 헤더 · UM3234 Rev5 §4</text>
+
+  <!-- overall layout -->
+  <text x="30" y="98" font-size="14" font-weight="700" fill="#374151">전체 배치</text>
+  <rect x="30" y="110" width="180" height="46" fill="#ede9fe" stroke="#a78bfa"/>
+  <text x="120" y="130" font-size="12.5" font-weight="700" fill="#5b21b6" text-anchor="middle">Base header</text>
+  <text x="120" y="148" font-size="11.5" fill="#6d28d9" text-anchor="middle">160 B</text>
+
+  <rect x="210" y="110" width="180" height="46" fill="#dbeafe" stroke="#60a5fa"/>
+  <text x="300" y="130" font-size="12.5" font-weight="700" fill="#1e40af" text-anchor="middle">Authentication ext.</text>
+  <text x="300" y="148" font-size="11.5" fill="#1e3a8a" text-anchor="middle">116 + N×32 B</text>
+
+  <rect x="390" y="110" width="180" height="46" fill="#fef3c7" stroke="#fbbf24"/>
+  <text x="480" y="130" font-size="12.5" font-weight="700" fill="#92400e" text-anchor="middle">Decryption ext.</text>
+  <text x="480" y="148" font-size="11.5" fill="#78350f" text-anchor="middle">암호화 시에만</text>
+
+  <rect x="570" y="110" width="150" height="46" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text x="645" y="130" font-size="12.5" font-weight="700" fill="#4b5563" text-anchor="middle">Padding ext.</text>
+  <text x="645" y="148" font-size="11.5" fill="#6b7280" text-anchor="middle">0x400 맞춤</text>
+
+  <rect x="720" y="110" width="210" height="46" fill="#dcfce7" stroke="#22c55e"/>
+  <text x="825" y="130" font-size="12.5" font-weight="700" fill="#166534" text-anchor="middle">Payload (실행 코드)</text>
+  <text x="825" y="148" font-size="11.5" fill="#15803d" text-anchor="middle">벡터테이블부터</text>
+
+  <line x1="30" y1="168" x2="720" y2="168" stroke="#7c3aed"/>
+  <line x1="30" y1="163" x2="30" y2="173" stroke="#7c3aed"/>
+  <line x1="720" y1="163" x2="720" y2="173" stroke="#7c3aed"/>
+  <text x="375" y="186" font-size="12" font-weight="600" fill="#7c3aed" text-anchor="middle">헤더 합계 = 0x400 (1024 B) 고정</text>
+  <text x="825" y="186" font-size="12" font-weight="600" fill="#166534" text-anchor="middle">load_address + 0x400</text>
+
+  <!-- base header table -->
+  <text x="30" y="228" font-size="14" font-weight="700" fill="#374151">Base header 필드</text>
+  <rect x="30" y="238" width="900" height="26" fill="#ede9fe"/>
+  <g font-size="12" font-weight="700" fill="#5b21b6">
+    <text x="42" y="256">offset</text><text x="118" y="256">크기</text><text x="188" y="256">필드</text>
+    <text x="430" y="256">내용</text><text x="880" y="256">서명대상</text>
+  </g>
+  <g font-size="12" fill="#1a1a2e">
+    <rect x="30" y="264" width="900" height="24" fill="#ffffff"/>
+    <text x="42" y="281" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">0x00</text><text x="118" y="281" fill="#6b7280">4 B</text><text x="188" y="281" font-weight="600">Magic number</text><text x="430" y="281">'S' 'T' 'M' 0x32</text><text x="890" y="281" fill="#9ca3af">n</text>
+    <rect x="30" y="288" width="900" height="24" fill="#f9fafb"/>
+    <text x="42" y="305" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">0x04</text><text x="118" y="305" fill="#6b7280">96 B</text><text x="188" y="305" font-weight="600">Image signature</text><text x="430" y="305">ECDSA 서명 (헤더 + 이미지에 대해 계산)</text><text x="890" y="305" fill="#9ca3af">n</text>
+    <rect x="30" y="312" width="900" height="24" fill="#ffffff"/>
+    <text x="42" y="329" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">0x64</text><text x="118" y="329" fill="#6b7280">4 B</text><text x="188" y="329" font-weight="600">Image checksum</text><text x="430" y="329">보호 페이로드 체크섬</text><text x="890" y="329" fill="#9ca3af">n</text>
+    <rect x="30" y="336" width="900" height="24" fill="#f9fafb"/>
+    <text x="42" y="353" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">0x68</text><text x="118" y="353" fill="#6b7280">4 B</text><text x="188" y="353" font-weight="600">Header version</text><text x="430" y="353">v2.3 (major 0x02 / minor 0x03)</text><text x="890" y="353" fill="#16a34a">y</text>
+    <rect x="30" y="360" width="900" height="24" fill="#fee2e2"/>
+    <text x="42" y="377" font-family="ui-monospace,Menlo,monospace" fill="#991b1b" font-weight="700">0x6C</text><text x="118" y="377" fill="#991b1b">4 B</text><text x="188" y="377" font-weight="700" fill="#991b1b">Image length</text><text x="430" y="377" fill="#991b1b" font-weight="600">← ROM이 "얼만큼 복사할지" 정하는 값 (바이트)</text><text x="890" y="377" fill="#16a34a">y</text>
+    <rect x="30" y="384" width="900" height="24" fill="#fee2e2"/>
+    <text x="42" y="401" font-family="ui-monospace,Menlo,monospace" fill="#991b1b" font-weight="700">0x70</text><text x="118" y="401" fill="#991b1b">4 B</text><text x="188" y="401" font-weight="700" fill="#991b1b">Image entry point</text><text x="430" y="401" fill="#991b1b" font-weight="600">← ROM이 "어디로 점프할지" 정하는 값</text><text x="890" y="401" fill="#16a34a">y</text>
+    <rect x="30" y="408" width="900" height="24" fill="#f9fafb"/>
+    <text x="42" y="425" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">0x74</text><text x="118" y="425" fill="#6b7280">4 B</text><text x="188" y="425" font-weight="600">Reserved1</text><text x="430" y="425">64-bit entry point 확장용</text><text x="890" y="425" fill="#16a34a">y</text>
+    <rect x="30" y="432" width="900" height="24" fill="#fee2e2"/>
+    <text x="42" y="449" font-family="ui-monospace,Menlo,monospace" fill="#991b1b" font-weight="700">0x78</text><text x="118" y="449" fill="#991b1b">4 B</text><text x="188" y="449" font-weight="700" fill="#991b1b">Load address</text><text x="430" y="449" fill="#991b1b" font-weight="600">← ROM이 "어디로 복사할지" 정하는 값 (0x3418_0000)</text><text x="890" y="449" fill="#16a34a">y</text>
+    <rect x="30" y="456" width="900" height="24" fill="#f9fafb"/>
+    <text x="42" y="473" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">0x7C</text><text x="118" y="473" fill="#6b7280">4 B</text><text x="188" y="473" font-weight="600">Reserved2</text><text x="430" y="473">64-bit load address 확장용</text><text x="890" y="473" fill="#16a34a">y</text>
+    <rect x="30" y="480" width="900" height="24" fill="#ffffff"/>
+    <text x="42" y="497" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">0x80</text><text x="118" y="497" fill="#6b7280">4 B</text><text x="188" y="497" font-weight="600">Version number</text><text x="430" y="497">이미지 버전 (안티롤백 단조 카운터, OTP20/21과 비교)</text><text x="890" y="497" fill="#16a34a">y</text>
+    <rect x="30" y="504" width="900" height="24" fill="#f9fafb"/>
+    <text x="42" y="521" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">0x84</text><text x="118" y="521" fill="#6b7280">4 B</text><text x="188" y="521" font-weight="600">Extension flags</text><text x="430" y="521">b0 = 인증 ext / b1 = 암호화 ext / b31 = 패딩 ext</text><text x="890" y="521" fill="#16a34a">y</text>
+    <rect x="30" y="528" width="900" height="24" fill="#ffffff"/>
+    <text x="42" y="545" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">0x88</text><text x="118" y="545" fill="#6b7280">4 B</text><text x="188" y="545" font-weight="600">Post header length</text><text x="430" y="545">모든 확장 헤더의 총 바이트 수</text><text x="890" y="545" fill="#16a34a">y</text>
+    <rect x="30" y="552" width="900" height="24" fill="#f9fafb"/>
+    <text x="42" y="569" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">0x8C</text><text x="118" y="569" fill="#6b7280">4 B</text><text x="188" y="569" font-weight="600">Binary type</text><text x="430" y="569">바이너리 종류 검사용 (fsbl 등)</text><text x="890" y="569" fill="#16a34a">y</text>
+    <rect x="30" y="576" width="900" height="24" fill="#ffffff"/>
+    <text x="42" y="593" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">0x90</text><text x="118" y="593" fill="#6b7280">8 B</text><text x="188" y="593" font-weight="600">PAD</text><text x="430" y="593">전부 0</text><text x="890" y="593" fill="#16a34a">y</text>
+    <rect x="30" y="600" width="900" height="24" fill="#f9fafb"/>
+    <text x="42" y="617" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">0x98</text><text x="118" y="617" fill="#6b7280">4 B</text><text x="188" y="617" font-weight="600">Nonsecure payload length</text><text x="430" y="617">서명 뒤에 붙는 비인증 페이로드 길이</text><text x="890" y="617" fill="#9ca3af">n</text>
+    <rect x="30" y="624" width="900" height="24" fill="#ffffff"/>
+    <text x="42" y="641" font-family="ui-monospace,Menlo,monospace" fill="#4b5563">0x9C</text><text x="118" y="641" fill="#6b7280">4 B</text><text x="188" y="641" font-weight="600">Nonsecure payload hash</text><text x="430" y="641">비인증 페이로드 SHA256 의 상위 32비트</text><text x="890" y="641" fill="#9ca3af">n</text>
+  </g>
+  <line x1="30" y1="648" x2="930" y2="648" stroke="#d1d5db"/>
+
+  <rect x="30" y="666" width="900" height="132" rx="8" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="46" y="688" font-size="13" font-weight="700" fill="#1d4ed8">읽는 법</text>
+  <text x="46" y="710" font-size="12" fill="#1e3a8a">· ROM은 Load address 로 복사 위치를, Image length 로 복사 바이트 수를, Image entry point 로 점프 주소를 결정한다.</text>
+  <text x="46" y="730" font-size="12" fill="#1e3a8a">· "코드가 +0x400 에서 시작"하는 것은 ROM의 하드코딩이 아니라, 패딩 확장 헤더가 헤더 총 길이를 0x400 으로 고정하기 때문이다.</text>
+  <text x="46" y="750" font-size="12" fill="#1e3a8a">· 인증 확장 헤더는 CLOSED_LOCKED_* 에서 필수, CLOSED_UNLOCKED 에서는 선택.</text>
+  <text x="46" y="770" font-size="12" fill="#1e3a8a">· UM3234 Rev5 Table 35 의 hex offset 열은 Binary type / PAD 행에서 십진 값과 어긋난다(0x90/0x94로 표기). 위 표는 십진 기준으로 정정한 값이다.</text>
+  <text x="46" y="790" font-size="12" fill="#1e3a8a">· ECDSA 공개키 필드는 768비트 고정. P-256을 쓰면 앞 512비트만 사용하고 나머지는 0x00 으로 채운다.</text>
+</svg>
