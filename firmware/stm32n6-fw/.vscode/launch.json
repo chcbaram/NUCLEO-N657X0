@@ -1,0 +1,34 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug FSBL (SRAM)",
+      "cwd": "${workspaceRoot}",
+      "executable": "./build/stm32n6-fw.elf",
+      "request": "launch",
+      "type": "cortex-debug",
+      "servertype": "stlink",
+      "showDevDebugOutput": "none",
+      "serverArgs": ["-m", "1"],
+      "runToEntryPoint": "main",
+      "osx": {
+        // gdbserver 는 1.18.0 (7.10.0) 을 쓴다.
+        //   1.21.0 의 7.13.0 은 ST-LINK 펌웨어 업그레이드를 요구한다 (V3J15M6 거부)
+        "serverpath": "/opt/ST/STM32CubeCLT_1.18.0/STLink-gdb-server/bin/ST-LINK_gdbserver",
+        // CubeProgrammer / SVD 는 1.21.0 (2.22.0) 을 쓴다.
+        "stm32cubeprogrammer": "/opt/ST/STM32CubeCLT_1.21.0/STM32CubeProgrammer/bin",
+        "svdFile": "/opt/ST/STM32CubeCLT_1.21.0/STMicroelectronics_CMSIS_SVD/STM32N657.svd"
+      },
+      // FSBL 은 BootROM 이 0x34180400 에 적재해 실행하는 이미지다.
+      // 하드웨어 리셋으로 진입하는 것이 아니므로, load 후 벡터테이블에서
+      // SP/PC 를 직접 세팅한다.
+      "postLaunchCommands": [
+        "set $sp = *(unsigned int*)0x34180400",
+        "set $pc = *(unsigned int*)0x34180404"
+      ],
+      "overrideLaunchCommands": [
+        "load"
+      ]
+    }
+  ]
+}

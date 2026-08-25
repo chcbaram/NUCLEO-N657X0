@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build-configure",
+      "type": "shell",
+      "command": "cmake -S . -B build",
+      "problemMatcher": []
+    },
+    {
+      "label": "build-build",
+      "type": "shell",
+      "command": "cmake -S . -B build && cmake --build build -j8",
+      "problemMatcher": ["$gcc"],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "build-clean",
+      "type": "shell",
+      "command": "cmake --build build --target clean",
+      "problemMatcher": []
+    },
+    {
+      "label": "load-sram",
+      "type": "shell",
+      "command": "./tools/load.sh",
+      "problemMatcher": [],
+      "dependsOn": "build-build"
+    }
+  ]
+}
