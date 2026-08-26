@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="760" viewBox="0 0 960 760" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR','Apple SD Gothic Neo',sans-serif">
+  <rect width="960" height="760" fill="#fbfbfd"/>
+  <text x="30" y="40" font-size="22" font-weight="700" fill="#1a1a2e">AXISRAM2 — BootROM 작업영역과 FSBL download buffer</text>
+  <text x="30" y="63" font-size="13" fill="#6b7280">0x2410_0000 (NS) / 0x3410_0000 (S) — 1024 KB · UM3234 Rev5 §3.9.2, Figure 4</text>
+
+  <!-- address column -->
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5" fill="#4b5563" text-anchor="end">
+    <text x="196" y="106">0x*41F_FFFF</text>
+    <text x="196" y="176">0x*418_0400</text>
+    <text x="196" y="228">0x*418_0000</text>
+    <text x="196" y="332">0x*410_8000</text>
+    <text x="196" y="384">0x*410_6000</text>
+    <text x="196" y="436">0x*410_4000</text>
+    <text x="196" y="488">0x*410_2000</text>
+    <text x="196" y="540">0x*410_1000</text>
+    <text x="196" y="592">0x*410_0000</text>
+  </g>
+
+  <!-- AREA4 : download buffer -->
+  <rect x="212" y="96" width="470" height="132" fill="#dcfce7" stroke="#22c55e" stroke-width="1.5"/>
+  <line x1="212" y1="176" x2="682" y2="176" stroke="#22c55e"/>
+  <text x="228" y="122" font-size="14" font-weight="700" fill="#166534">Download buffer — Code (FSBL 페이로드)</text>
+  <text x="228" y="142" font-size="12" fill="#15803d">링커 origin = 0x3418_0400</text>
+  <text x="228" y="160" font-size="12" fill="#15803d">최대 511 KB (헤더 1 KB 포함 총 512 KB)</text>
+  <text x="228" y="200" font-size="13" font-weight="700" fill="#166534">Download buffer — Header</text>
+  <text x="228" y="218" font-size="12" fill="#15803d">STM32 이미지 헤더 512 B + 패딩 = 0x400 고정</text>
+  <text x="700" y="150" font-size="12.5" font-weight="700" fill="#166534">RISAF3 AREA4</text>
+  <text x="700" y="168" font-size="12" fill="#15803d">512 KB</text>
+
+  <!-- Reserved -->
+  <rect x="212" y="228" width="470" height="104" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text x="228" y="272" font-size="13" font-weight="600" fill="#4b5563">Reserved (ROM 미사용)</text>
+  <text x="228" y="292" font-size="12" fill="#6b7280">FSBL이 자유롭게 써도 되는 480 KB</text>
+  <text x="700" y="282" font-size="12" fill="#6b7280">≈480 KB</text>
+
+  <!-- NSEC data -->
+  <rect x="212" y="332" width="470" height="52" fill="#dbeafe" stroke="#60a5fa"/>
+  <text x="228" y="352" font-size="12.5" font-weight="600" fill="#1e40af">Non-secure ROM 데이터 — shared / ZI,RW / STACK,HEAP</text>
+  <text x="228" y="372" font-size="12" font-family="ui-monospace,Menlo,monospace" fill="#1e3a8a">NSEC ROM trace buffer @ 0x2410_77F0</text>
+  <text x="700" y="362" font-size="12" fill="#1e40af">8 KB</text>
+
+  <!-- RW_SECURE_RO_NONSECURE -->
+  <rect x="212" y="384" width="470" height="52" fill="#e0e7ff" stroke="#818cf8"/>
+  <text x="228" y="410" font-size="12.5" font-weight="600" fill="#3730a3">RW_SECURE_RO_NONSECURE</text>
+  <text x="228" y="428" font-size="12" fill="#4338ca">보안/비보안 공유 데이터 (RISAF3 AREA2, 4 KB 단위)</text>
+  <text x="700" y="414" font-size="12" fill="#3730a3">8 KB</text>
+
+  <!-- SEC data -->
+  <rect x="212" y="436" width="470" height="52" fill="#ede9fe" stroke="#a78bfa"/>
+  <text x="228" y="456" font-size="12.5" font-weight="600" fill="#5b21b6">Secure ROM 데이터 — shared / ZI,RW / STACK,HEAP</text>
+  <text x="228" y="476" font-size="12" font-family="ui-monospace,Menlo,monospace" fill="#6d28d9">SEC ROM trace buffer @ 0x3410_37F0</text>
+  <text x="700" y="466" font-size="12.5" font-weight="700" fill="#5b21b6">AREA3 · 8 KB</text>
+
+  <!-- dwnload manager -->
+  <rect x="212" y="488" width="470" height="52" fill="#fef3c7" stroke="#fbbf24"/>
+  <text x="228" y="514" font-size="12.5" font-weight="600" fill="#92400e">DWNLOADMANAGER data + padding</text>
+  <text x="228" y="532" font-size="12" fill="#78350f">시리얼 다운로드 매니저 작업 영역</text>
+  <text x="700" y="518" font-size="12" fill="#92400e">4 KB</text>
+
+  <!-- context -->
+  <rect x="212" y="540" width="470" height="52" fill="#fee2e2" stroke="#f87171" stroke-width="1.5"/>
+  <text x="228" y="566" font-size="13" font-weight="700" fill="#991b1b">Boot context 구조체</text>
+  <text x="228" y="584" font-size="12" fill="#7f1d1d">ROM이 FSBL 진입 시 r0 에 이 주소를 담아 전달</text>
+  <text x="700" y="562" font-size="12.5" font-weight="700" fill="#991b1b">AREA1 · 4 KB</text>
+  <text x="700" y="580" font-size="12" fill="#b91c1c">CONTEXT_BASE_ADDR</text>
+
+  <!-- header size bracket (left margin, clear of the address column) -->
+  <path d="M78,176 L62,176 L62,228 L78,228" fill="none" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="52" y="206" font-size="11.5" font-weight="600" fill="#7c3aed" text-anchor="end">+0x400</text>
+
+  <!-- notes -->
+  <rect x="30" y="616" width="900" height="118" rx="8" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="46" y="638" font-size="13" font-weight="700" fill="#9a3412">FSBL 작성 시 주의</text>
+  <text x="46" y="660" font-size="12" fill="#7c2d12">1. FSBL은 자기 자신이 올라간 0x3418_0400 위에서 실행 중이다. 스택/힙도 이 512 KB 안에 잡힌다.</text>
+  <text x="46" y="680" font-size="12" fill="#7c2d12">2. ROM 트레이스를 읽을 계획이면 0x3410_37F0 / 0x2410_77F0 을 덮기 전에 먼저 파싱해야 한다.</text>
+  <text x="46" y="700" font-size="12" fill="#7c2d12">3. MPU_S 로 인증된 영역 밖은 실행 불가로 설정되어 있다 → FSBL 코드의 시작/끝 주소는 32바이트 정렬 필요.</text>
+  <text x="46" y="720" font-size="12" fill="#7c2d12">4. * = 2 (non-secure alias) 또는 3 (secure alias). RISAF3 주소는 AXISRAM2 시작 기준 오프셋이라 alias 영향 없음.</text>
+</svg>

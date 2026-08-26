@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="360" viewBox="0 0 960 360" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR','Apple SD Gothic Neo',sans-serif">
+  <defs>
+    <marker id="cp" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto">
+      <path d="M0,0 L12,5 L0,10 z" fill="#7c3aed"/>
+    </marker>
+  </defs>
+  <rect width="960" height="360" fill="#fbfbfd"/>
+  <text x="30" y="38" font-size="18" font-weight="700" fill="#1a1a2e">BootROM의 FSBL 복사</text>
+
+  <!-- source -->
+  <text x="60" y="80" font-size="13" font-weight="700" fill="#1e40af">외부 NOR (XSPI2)</text>
+  <text x="60" y="99" font-size="12" font-family="ui-monospace,Menlo,monospace" fill="#1e3a8a">0x7000_0000</text>
+
+  <rect x="60" y="112" width="280" height="52" fill="#dbeafe" stroke="#60a5fa"/>
+  <text x="76" y="134" font-size="13" font-weight="600" fill="#1e40af">header</text>
+  <text x="326" y="134" font-size="12" font-family="ui-monospace,Menlo,monospace" fill="#1e3a8a" text-anchor="end">0x400</text>
+  <text x="76" y="153" font-size="11.5" fill="#1e3a8a">base + auth + (enc) + padding</text>
+
+  <rect x="60" y="164" width="280" height="96" fill="#eff6ff" stroke="#60a5fa"/>
+  <text x="76" y="192" font-size="13" font-weight="600" fill="#1e40af">FSBL payload</text>
+  <text x="76" y="214" font-size="11.5" fill="#1e3a8a">길이 = 헤더의 Image length</text>
+  <text x="76" y="234" font-size="11.5" fill="#1e3a8a">벡터테이블부터 시작</text>
+
+  <text x="60" y="288" font-size="11.5" font-family="ui-monospace,Menlo,monospace" fill="#6b7280">FSBL2 = 0x7004_0000 (백업본)</text>
+
+  <!-- arrow -->
+  <line x1="360" y1="186" x2="592" y2="186" stroke="#7c3aed" stroke-width="2" marker-end="url(#cp)"/>
+  <text x="476" y="172" font-size="13" font-weight="700" fill="#7c3aed" text-anchor="middle">복사</text>
+  <text x="476" y="208" font-size="11.5" fill="#7c3aed" text-anchor="middle">목적지 = 헤더의 Load address</text>
+
+  <!-- dest -->
+  <text x="612" y="80" font-size="13" font-weight="700" fill="#166534">AXISRAM2 download buffer</text>
+  <text x="612" y="99" font-size="12" font-family="ui-monospace,Menlo,monospace" fill="#15803d">0x3418_0000</text>
+
+  <rect x="612" y="112" width="280" height="52" fill="#dcfce7" stroke="#22c55e"/>
+  <text x="628" y="134" font-size="13" font-weight="600" fill="#166534">header</text>
+  <text x="878" y="134" font-size="12" font-family="ui-monospace,Menlo,monospace" fill="#15803d" text-anchor="end">0x400</text>
+  <text x="628" y="153" font-size="11.5" fill="#15803d">RISAF3 AREA4 안쪽</text>
+
+  <rect x="612" y="164" width="280" height="96" fill="#ecfdf5" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="628" y="192" font-size="13" font-weight="600" fill="#166534">FSBL payload</text>
+  <text x="628" y="214" font-size="11.5" fill="#15803d">최대 511 KB</text>
+  <text x="628" y="234" font-size="11.5" fill="#15803d">링커 ORIGIN = 0x3418_0400</text>
+
+  <text x="906" y="168" font-size="12" font-family="ui-monospace,Menlo,monospace" font-weight="700" fill="#166534">0x3418_0400</text>
+  <text x="906" y="264" font-size="12" font-family="ui-monospace,Menlo,monospace" fill="#15803d">0x341F_FFFF</text>
+
+  <text x="612" y="288" font-size="12" font-weight="700" fill="#166534">↑ ROM은 헤더의 Image entry point 로 점프한다</text>
+
+  <rect x="30" y="306" width="900" height="38" rx="6" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="46" y="330" font-size="12" fill="#7c2d12">복사 위치·바이트 수·점프 주소는 전부 헤더가 정한다. +0x400 은 ROM의 하드코딩이 아니라 패딩 확장 헤더가 헤더 길이를 고정한 결과다.</text>
+</svg>
