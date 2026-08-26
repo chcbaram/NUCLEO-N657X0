@@ -24,7 +24,7 @@ firmware/stm32n6-fw/
 ├── .gitignore
 ├── .vscode/
 │   ├── tasks.json                build / load 태스크
-│   ├── launch.json               cortex-debug (gdbserver 경로 주의)
+│   ├── launch.json               cortex-debug (CubeCLT 1.21.0)
 │   └── c_cpp_properties.json
 ├── tools/
 │   ├── arm-none-eabi-gcc.cmake   툴체인 정의 (참조 프로젝트에서 그대로)
@@ -212,20 +212,34 @@ set $pc = *(unsigned int*)0x34180404
 detach
 ```
 
-### ⚠️ gdbserver 는 CubeCLT 1.18.0 것을 쓴다
+### 툴 버전은 CubeCLT 1.21.0 으로 통일한다
 
-| 도구 | 버전 | 이유 |
-|---|---|---|
-| `STM32_Programmer_CLI` / `STM32_SigningTool_CLI` / SVD | **1.21.0** (2.22.0) | 1.22.0 은 macOS 13+ 요구 |
-| `ST-LINK_gdbserver` | **1.18.0** (7.10.0) | 1.21.0 의 7.13.0 은 ST-LINK 펌웨어 업그레이드 요구 |
+| 도구 | 버전 |
+|---|---|
+| `STM32_Programmer_CLI` / `STM32_SigningTool_CLI` / SVD | **1.21.0** (2.22.0) |
+| `ST-LINK_gdbserver` | **1.21.0** (7.13.0) |
+
+1.22.0 은 Qt6 가 macOS 13+ 를 요구해서 이 호스트에서 실행되지 않는다. 그래서 1.21.0 이 상한이다.
+
+#### ST-LINK 펌웨어 요구사항
+
+gdbserver 7.13.0 은 구형 ST-LINK 펌웨어를 거부한다.
 
 ```
 Error in initializing ST-LINK device.
 Reason: ST-LINK firmware upgrade required.
 ```
 
-보드의 ST-LINK 펌웨어는 `V3J15M6` 이다. 업그레이드하면 1.21.0 gdbserver 도 쓸 수 있지만,
-지금은 버전을 섞는 쪽이 안전하다.
+보드 출고 펌웨어가 `V3J15M6` 이었고, 아래로 **`V3J17M10`** 까지 올려서 해결했다.
+
+```bash
+/opt/ST/STM32CubeCLT_1.21.0/STLinkUpgrade.sh
+#   Firmware version detected: V3J15M6
+#   Upgrade is successful.
+#   Version read: V3.J17.M10.B0.S0.P0
+```
+
+업그레이드 후 `-c port=SWD ap=1 mode=Hotplug` 연결, gdb 적재, LED 토글까지 재확인했다.
 
 ---
 

@@ -11,8 +11,10 @@
 #
 set -e
 
-CLT_PROG=${CLT_PROG:-/opt/ST/STM32CubeCLT_1.21.0}   # Programmer / SigningTool / SVD
-CLT_GDB=${CLT_GDB:-/opt/ST/STM32CubeCLT_1.18.0}     # gdbserver (7.10.0)
+#   gdbserver 7.13.0 은 ST-LINK 펌웨어 V3J17M10 이상을 요구한다.
+#   업그레이드: /opt/ST/STM32CubeCLT_1.21.0/STLinkUpgrade.sh
+#
+CLT=${CLT:-/opt/ST/STM32CubeCLT_1.21.0}
 
 PRJ_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ELF="$PRJ_DIR/build/stm32n6-fw.elf"
@@ -20,9 +22,9 @@ GDB_PORT=${GDB_PORT:-61234}
 
 [ -f "$ELF" ] || { echo "elf 가 없다: $ELF  (먼저 빌드할 것)"; exit 1; }
 
-"$CLT_GDB/STLink-gdb-server/bin/ST-LINK_gdbserver" \
+"$CLT/STLink-gdb-server/bin/ST-LINK_gdbserver" \
   -p "$GDB_PORT" -l 1 -m 1 -k -e -d --attach \
-  -cp "$CLT_PROG/STM32CubeProgrammer/bin" > /tmp/stm32n6-gdbserver.log 2>&1 &
+  -cp "$CLT/STM32CubeProgrammer/bin" > /tmp/stm32n6-gdbserver.log 2>&1 &
 SRV_PID=$!
 trap 'kill $SRV_PID 2>/dev/null || true' EXIT
 

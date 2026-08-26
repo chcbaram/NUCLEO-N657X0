@@ -12,10 +12,9 @@
       "serverArgs": ["-m", "1"],
       "runToEntryPoint": "main",
       "osx": {
-        // gdbserver 는 1.18.0 (7.10.0) 을 쓴다.
-        //   1.21.0 의 7.13.0 은 ST-LINK 펌웨어 업그레이드를 요구한다 (V3J15M6 거부)
-        "serverpath": "/opt/ST/STM32CubeCLT_1.18.0/STLink-gdb-server/bin/ST-LINK_gdbserver",
-        // CubeProgrammer / SVD 는 1.21.0 (2.22.0) 을 쓴다.
+        // CubeCLT 1.21.0 으로 통일. (1.22.0 은 macOS 13+ 를 요구해서 못 쓴다)
+        // gdbserver 7.13.0 은 ST-LINK 펌웨어 V3J17M10 이상이 필요하다.
+        "serverpath": "/opt/ST/STM32CubeCLT_1.21.0/STLink-gdb-server/bin/ST-LINK_gdbserver",
         "stm32cubeprogrammer": "/opt/ST/STM32CubeCLT_1.21.0/STM32CubeProgrammer/bin",
         "svdFile": "/opt/ST/STM32CubeCLT_1.21.0/STMicroelectronics_CMSIS_SVD/STM32N657.svd"
       },

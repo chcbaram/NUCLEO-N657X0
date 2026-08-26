@@ -136,7 +136,7 @@ CubeProgrammer 2.22.0 이므로 **`-align` 옵션이 필요**하다. 도구 도�
 
 ```
 ST-LINK SN  : 0038002E3434511734313937
-ST-LINK FW  : V3J15M6
+ST-LINK FW  : V3J17M10          <- 출고 시 V3J15M6 -> STLinkUpgrade.sh 로 갱신
 Board       : NUCLEO-N657X0-Q
 Voltage     : 3.29V
 ```
@@ -194,14 +194,18 @@ CubeN6 는 이미 로컬에 있다 → [README.md](README.md#로컬-stm32cuben6)
 
 - [x] arm-none-eabi-gcc 14.2 (Cortex-M55 / MVE 확인)
 - [x] cmake / make / ninja
-- [x] CubeCLT 1.21.0 (Programmer 2.22.0, SigningTool 2.22.0, gdbserver, STM32N657.svd)
+- [x] CubeCLT 1.21.0 (Programmer 2.22.0, SigningTool 2.22.0, gdbserver 7.13.0, STM32N657.svd)
+- [x] ST-LINK 펌웨어 `V3J17M10` (gdbserver 7.13.0 요구사항)
 - [x] `MX25UM51245G_STM32N6570-NUCLEO.stldr` 외부 로더
 - [x] STM32CubeN6 로컬 sparse checkout
 - [x] ST-LINK V3EC 인식, VCP `/dev/cu.usbmodem114102`
 - [x] **JP2 (BOOT1) = 1 로 두고 SWD 연결 확인** — Device ID `0x486`, Rev B, Cortex-M55
 - [ ] VSCode `cortex-debug` 확장 (참조 프로젝트에서 쓰고 있다면 이미 설치되어 있음)
 
-> **추가 발견** — `ST-LINK_gdbserver` 는 CubeCLT **1.18.0 (7.10.0)** 을 써야 한다.
-> 1.21.0 의 7.13.0 은 보드의 ST-LINK 펌웨어 `V3J15M6` 을 거부하고 업그레이드를 요구한다.
-> Programmer / SigningTool / SVD 는 1.21.0, gdbserver 만 1.18.0 으로 섞어 쓴다.
+> **ST-LINK 펌웨어** — CubeCLT 1.21.0 의 gdbserver 7.13.0 은 출고 펌웨어 `V3J15M6` 을
+> 거부한다. `STLinkUpgrade.sh` 로 `V3J17M10` 까지 올리면 **툴 전체를 1.21.0 으로 통일**할 수 있다.
 > 자세한 내용은 [11-project-skeleton.md](11-project-skeleton.md#6-빌드--적재) 참고.
+
+```bash
+/opt/ST/STM32CubeCLT_1.21.0/STLinkUpgrade.sh
+```

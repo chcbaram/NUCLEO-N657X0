@@ -205,8 +205,8 @@ toggle#3 ODR=0x501 millis=14500
 | `error: 'SAU' undeclared`, `'SCB_NS' undeclared` | FSBL 은 secure state. CMSIS 헤더가 해당 심볼을 `__ARM_FEATURE_CMSE==3` 에서만 노출 | 컴파일/링크에 `-mcmse` 추가 |
 | `stm32n6xx_ll_dlyb.c` 컴파일 실패 | HAL `Src/*.c` 를 전부 glob → 비활성 모듈 소스까지 잡힘 | HAL 소스를 명시 목록으로 관리 |
 | 적재 후 GPIO 를 읽으면 ROM 설정만 보임 | `STM32_Programmer_CLI -c` 가 연결할 때마다 software reset → BootROM 복귀 | 적재·확인 모두 gdb 로 |
-| gdbserver 가 `ST-LINK firmware upgrade required` | CubeCLT 1.21.0 의 gdbserver 7.13.0 이 `V3J15M6` 거부 | gdbserver 만 CubeCLT **1.18.0** (7.10.0) 사용 |
-| gdb 에서 `Cannot access memory at address 0x56021814` | `load` 없이 attach 만 하면 주변장치 영역 접근이 막힌다 | 같은 세션에서 `load` 를 먼저 하거나, 확인용 세션도 `load` 를 포함시킨다 |
+| gdbserver 가 `ST-LINK firmware upgrade required` | gdbserver 7.13.0 이 출고 펌웨어 `V3J15M6` 거부 | `STLinkUpgrade.sh` 로 **`V3J17M10`** 까지 업그레이드 |
+| gdb 에서 `Cannot access memory at address 0x56021814` | 앞선 gdbserver 세션이 detach 한 뒤 새 서버로 다시 attach 하면 주변장치 영역 읽기가 막힌다. 브레이크포인트는 정상 동작하므로 펌웨어 문제는 아니다 | 확인은 **gdbserver 를 새로 띄우고 그 세션 안에서 `load` 까지 한 번에** 한다. `load.sh` 를 돌린 뒤 별도 세션으로 붙지 말 것 |
 
 ---
 
