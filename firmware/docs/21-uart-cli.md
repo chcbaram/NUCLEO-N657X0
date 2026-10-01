@@ -1,8 +1,8 @@
-# 21. UART (VCP) + 로그
+# 21. UART (VCP) + 로그 + CLI
 
 > ST-LINK VCP 로 부팅 배너와 로그를 내보내고, **수신은 circular DMA** 로 받는다.
 > 이 문서의 핵심은 **D-캐시가 켜진 상태에서 DMA 와 메모리를 공유하는 법**이다.
-> CLI 는 아직 붙이지 않았다 (7절).
+> 그 위에 참조 프로젝트의 CLI 와, 시간순으로 출력되는 로그 링 버퍼를 얹었다.
 > 관련: [20-led.md](20-led.md), [03-board-boot-mapping.md](03-board-boot-mapping.md)
 
 ---
@@ -31,9 +31,10 @@
 |---|---|
 | `src/common/hw/include/uart.h`, `log.h` | 참조 프로젝트와 동일 |
 | `src/hw/driver/uart.c` | USART1 + GPDMA1 CH0 circular 수신 |
-| `src/hw/driver/log.c` | 참조 것에서 CLI 부분만 뺐다. `_write` 를 여기서 로그 채널로 보낸다 |
+| `src/hw/driver/log.c` | **링 버퍼 판**(`nu54v-dk`) 이식 (8절). `_write` 를 여기서 로그 채널로 보낸다 |
+| `src/common/hw/include/cli.h`, `src/common/hw/src/cli.c` | 참조 프로젝트와 동일 (7절) |
 | `src/hw/hw.c` | 부팅 배너 |
-| `src/ap/ap.c` | **임시 에코** — CLI 가 붙으면 없앤다 |
+| `src/ap/ap.c` | `cliOpen()` + 메인 루프에서 `cliMain()` |
 | `src/bsp/bsp.c` | `bspMpuInit()` — 4절 |
 | `src/bsp/ldscript/*.ld` | `.noncacheable` 구역 — 4절 |
 | `stm32n6xx_hal_conf.h`, `CMakeLists.txt` | `HAL_UART_MODULE_ENABLED`, `hal_uart.c`, `hal_uart_ex.c` 추가 |
@@ -194,7 +195,83 @@ ST 예제는 `SystemIsolation_Config()` 에서 `__HAL_RCC_RIFSC_CLK_ENABLE()` �
 
 ---
 
-## 7. 검증
+## 7. CLI
+
+참조 프로젝트의 `cli.h` / `cli.c` 를 **그대로** 가져왔다. 의존하는 것은 `uart.h` 와 `delay()` 뿐이다.
+`uart.c` / `log.c` 에서 빼 두었던 `uart`, `log` 명령도 참조 것 그대로 되살렸다.
+
+참조 프로젝트는 CLI 를 RTOS 스레드(모듈)로 돌리지만 여기는 RTOS 가 없어서 `ap.c` 에서 직접 부른다.
+
+```c
+void apInit(void)
+{
+  cliOpen(HW_UART_CH_CLI, 115200);
+}
+
+void apMain(void)
+{
+  logBoot(false);          // 여기까지가 부팅 로그
+  while (1)
+  {
+    ...                    // LED
+    cliMain();
+  }
+}
+```
+
+| 명령 | 내용 |
+|---|---|
+| `help` | 명령 목록 |
+| `md` | 메모리 덤프 |
+| `uart info` / `uart test <ch>` | 채널 정보 / 다른 채널과 주고받기 |
+| `log info` / `log boot` / `log list` | 버퍼 상태 / 부팅 로그 / 전체 로그 |
+
+RAM 이 68 KB → 88 KB 로 늘었다. 그중 약 9 KB 는 `cliArgsGetFloat()` 가 쓰는 `strtof` 와
+newlib 의 큰 수 연산(`_strtod_l`, `__gethex`, `__multiply` …)이다.
+
+---
+
+## 8. 로그 링 버퍼
+
+참조 프로젝트(`stm32c5-ai`)의 `log.c` 는 버퍼 끝에 닿으면 **0 번지로 점프해 덮어쓰고**,
+`log list` 는 0 번지부터 출력한다. 그래서 한 번 넘친 뒤에는 **최신 로그가 맨 위**에 나오고
+경계에 반쯤 덮인 줄이 깨진 채 섞인다.
+
+이미 고친 판이 `nu54v-dk` 프로젝트에 있어서 그것을 이식했다 (Zephyr 전용 ISR 처리만 뺐다).
+
+| | 참조 원본 | 이식한 판 |
+|---|---|---|
+| 쓰기 | 넘치면 0 으로 점프 → 중간에 빈 구간 | **바이트 단위 모듈로** — 빈 구간 없음 |
+| 출력 | 0 번지부터 | `logBufDump()` — **오래된 것 → 최신**. 넘친 경우 맨 앞의 잘린 줄은 건너뛴다. boot / list 공용 |
+| 줄 머리 | `%04X\t` (줄 번호) | `[   12.345]\t` — 부팅 후 초.밀리초 (RTC 가 있으면 시각). 줄 번호는 뺐다 |
+| `logPrintf` | `vsnprintf` 반환값을 그대로 씀 | 버퍼 크기로 자른다 |
+
+마지막 줄은 원본의 **버그**였다. `vsnprintf` 는 잘리기 전 길이를 돌려주므로 255 자를 넘는
+로그면 `uartWrite` 가 `print_buf` 밖까지 읽었다.
+
+### 검증
+
+list 버퍼만 잠깐 256 B 로 줄여 부팅 로그(337 B)로 넘치게 만들었다.
+
+```
+log boot   (2048 B, 안 넘침)          log list   (256 B, 넘침)
+0000 [    0.002]  [ Firmware Begin...  0002 [    0.007]  Booting..Ver
+0001 [    0.004]  Booting..Name        0003 [    0.009]  Booting..Clock
+...                                    ...
+0007 [    0.017]                       0007 [    0.017]
+```
+
+넘친 쪽은 `buf_length 256`(가득 참)이고, 반쯤 덮인 `0001` 줄을 건너뛰어 `0002` 부터
+시간순으로 나온다.
+
+이 확인은 줄 번호가 있던 판으로 했다. 그 뒤 타임스탬프가 있으니 줄 번호는 빼기로 했다
+(`log info` 의 `line_index` 카운터는 남아 있다). 출력 순서는 버퍼 안 위치로 정해지므로
+번호가 없어도 같다. 다만 같은 밀리초에 찍힌 줄끼리는 구분할 수 없고, 덮여 사라진 줄을
+번호 간격으로 알아챌 수는 없다.
+
+---
+
+## 9. 검증
 
 모두 전원을 재인가한 깨끗한 상태에서 다시 확인했다.
 
@@ -205,6 +282,8 @@ ST 예제는 `SystemIsolation_Config()` 에서 `__HAL_RCC_RIFSC_CLK_ENABLE()` �
 | 짧은 문자열 에코 | `hello N6\r\n` | ✅ |
 | **링 버퍼 여러 바퀴** | 바이너리 200 B × 15 = 3000 B (1024 B 버퍼 2.9 바퀴) | ✅ 한 바이트도 안 틀림 |
 | 캐시 처리의 필요성 | MPU 를 빼고 같은 테스트 | ❌ 수신 정지 (4절) |
+| CLI | baram-term 으로 `help`, `uart info`, `log info` | ✅ |
+| 로그 순서 | list 256 B 로 넘치게 한 뒤 `log list` | ✅ 오래된 것 → 최신 (8절) |
 
 부팅 배너:
 
@@ -224,23 +303,24 @@ N6 는 CPU 클럭(IC1, 600 MHz)과 SYSCLK(IC2, 400 MHz)이 다르다.
 
 ---
 
-## 8. 막혔던 지점
+## 10. 막혔던 지점
 
 | 증상 | 원인 | 해결 |
 |---|---|---|
 | 시리얼에 아무것도 안 들어옴 | 테스트 스크립트(pyserial)와 baram-term 이 같은 포트를 동시에 열었다. macOS 는 둘 다 열리지만 수신 데이터를 나눠 가져간다 | baram-term 이 열려 있으면 `baram-ctl` 로만 주고받는다. 바이너리 테스트처럼 직접 열어야 하면 `baram-ctl release` → 테스트 → `resume` |
 | 배너는 나왔는데 에코가 안 됨 | gdb 로 `apMain` 브레이크포인트에서 세운 채 세션을 끝내서 코어가 에코 루프에 들어가지 못했다 | 동작 확인은 `load.sh`(detach 후 실행)로 한다 |
-| MPU 를 뺀 실험 뒤 SWD 가 안 붙음 (`Unable to get core ID`), 출력도 없음 | 원인은 확인하지 못했다. 정상 빌드로 되돌려도 계속됐고 Programmer 로 NRST 를 걸어도 반복됐다 | **USB 를 뽑았다 꽂아 전원을 재인가**하자 정상 빌드가 첫 실행부터 동작했다 |
+| **돌고 있는 펌웨어에 SWD 로 붙으면 보드가 멈춤** (`Target unknown error 32` / `Unable to get core ID`, 이후 펌웨어 응답 없음) | 펌웨어 자체는 멈추지 않는다 — 적재 후 6.5 분 동안 30 초마다 CLI 응답 확인. 멈춤은 항상 `load.sh` 나 디버그 스크립트가 **실행 중인 펌웨어에 attach 하는 순간** 일어났다. `load.sh` 의 gdbserver 는 `-k`(`--initialize-reset`) + `--attach` 로 붙는다. LED 펌웨어 때는 같은 방식으로 문제없었다. **근본 원인은 아직 모른다** | **USB 를 뽑았다 꽂아 전원을 재인가**한 뒤 `load.sh`. Programmer 로 NRST 를 걸어도 풀리지 않을 때가 있다 (12 절) |
 | `gdb` 가 엉뚱한 값을 찍음 | 타깃 연결에 실패했는데 `-batch` 가 ELF 의 초기값을 그대로 출력했다 | 출력에 `could not connect` 가 있으면 값을 믿지 않는다 |
 
 ---
 
-## 9. 크기
+## 11. 크기
 
 | | RAM 사용 |
 |---|---|
 | LED 단계 | 15,456 B (2.95 %) |
 | UART + 로그 | 68,160 B (13.03 %) |
+| + CLI, 로그 링 버퍼 | 88,720 B (16.96 %) |
 
 늘어난 53 KB 중 가장 큰 것은 **`HAL_RCCEx_PeriphCLKConfig()` 하나(16.9 KB)** 다.
 USART1 커널 클럭 소스 하나 고르려고 불렀는데, N6 의 모든 주변장치를 다루는 함수라
@@ -253,9 +333,10 @@ USART1 커널 클럭 소스 하나 고르려고 불렀는데, N6 의 모든 주�
 
 ---
 
-## 10. 다음
+## 12. 다음
 
-- **CLI** — 참조 프로젝트의 `cli.c` 이식. `ap.c` 의 임시 에코를 대체하고,
-  `log.c` / `uart.c` 의 `cliAdd()` 명령(`log`, `uart`)도 되살린다
 - 수신 오류 처리 — 지금은 NVIC 인터럽트를 켜지 않아 ORE/FE 를 처리하지 않는다.
   DMA 가 바이트마다 읽어 가므로 ORE 는 생기지 않을 것으로 보지만 확인하지 않았다
+- **SWD attach 시 멈춤** (10 절) — 시도해 볼 것: `load.sh` 에서 `-k` 를 빼고 붙기,
+  attach 대신 Programmer `-c mode=Hotplug` 로 붙어 리셋한 뒤 적재, 메인 루프가
+  DMA `CBR1` 을 쉬지 않고 읽는 것이 디버그 접근과 부딪히는지

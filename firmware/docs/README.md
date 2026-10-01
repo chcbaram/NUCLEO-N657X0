@@ -8,9 +8,9 @@ STM32N657X0H3Q / MB1940-C02 보드 기준 펌웨어 개발 참고 문서.
 |---|---|
 | 보드 | NUCLEO-N657X0-Q (MB1940-C02), Device ID `0x486` Rev B |
 | **부트 점퍼** | **JP2(BOOT1) = 1 → Development boot.** 이 상태여야 SWD 가 붙는다 |
-| 펌웨어 | `firmware/stm32n6-fw` — FSBL 골격 + LED + **UART(VCP, DMA 수신) + 로그** 동작 확인 |
+| 펌웨어 | `firmware/stm32n6-fw` — FSBL 골격 + LED + **UART(VCP, DMA 수신) + 로그 + CLI** 동작 확인 |
 | 클럭 | 600 MHz (HSI → PLL1 1200 MHz → IC1 /2) |
-| 빌드 | 68,160 B / 511 KB (13.03%) — arm-none-eabi-gcc 15.3.1 |
+| 빌드 | 88,720 B / 511 KB (16.96%) — arm-none-eabi-gcc 15.3.1 |
 | 툴 | CubeCLT 1.22.0 에서 필요한 것만 `~/ST` 에 추출 (Programmer 2.23.0 / gdbserver 7.14.0). 적재·SWD 확인 완료 |
 
 ### 바로 다시 시작하기
@@ -18,10 +18,12 @@ STM32N657X0H3Q / MB1940-C02 보드 기준 펌웨어 개발 참고 문서.
 ```bash
 cd firmware/stm32n6-fw
 cmake -S . -B build && cmake --build build -j20
-./tools/load.sh                       # SRAM 적재 후 실행 (LD7 500ms 점멸 + VCP 115200 부팅 배너)
+./tools/load.sh                       # SRAM 적재 후 실행 (LD7 500ms 점멸 + VCP 115200 부팅 배너 + cli#)
 ```
 
 연결이 안 되면 **JP2(BOOT1)가 1 쪽(pin 2-3)인지** 먼저 확인한다.
+`load.sh` 가 `Target unknown error 32` 로 실패하면 **USB 를 뽑았다 꽂은 뒤** 다시 한다
+(돌고 있는 펌웨어에 붙을 때 생기는 문제, 원인 미확정 → [21](21-uart-cli.md) 10절).
 
 ```bash
 export STM32CLT=~/ST/STM32CubeCLT
@@ -39,7 +41,8 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 
 ### 다음 작업
 
-1. **CLI** — 참조 프로젝트 `cli.c` 이식. `ap.c` 의 임시 에코를 대체한다 ([21](21-uart-cli.md) 10절)
+1. **800 MHz** — overdrive: PB12(`PWR_LP`) High → TPS62088 0.89 V, VOS `SCALE0`, PLL1 1600 MHz
+   - 데이터시트로 VOS 별 주파수 상한 확인 필요 (로컬 PDF 없음)
 2. BootROM 트레이스 파서 — `0x3410_37F0`(SEC) / `0x2410_77F0`(NSEC) 를 덮기 전에 읽어 출력
 3. 외부 NOR (XSPI2) — 여기서 `HAL_XSPI/BSEC` 재활성화, OTP `VDDIO3_HSLV` 판단 필요
 4. 서명 → 플래시 기록 → Flash boot 전환 (BOOT0=0, BOOT1=0)
@@ -78,7 +81,7 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 | 문서 | 기능 | 상태 |
 |---|---|---|
 | [20-led.md](20-led.md) | LED 구동 + 빌드/적재/검증 루프 확립 | ✅ |
-| [21-uart-cli.md](21-uart-cli.md) | UART(VCP) + 로그, **DMA 수신과 D-캐시** / CLI | UART ✅ / CLI 예정 |
+| [21-uart-cli.md](21-uart-cli.md) | UART(VCP) + 로그 + CLI, **DMA 수신과 D-캐시**, 로그 링 버퍼 | ✅ |
 | `22-flash-boot.md` | 서명 → 외부 NOR 기록 → Flash boot 전환 | 예정 |
 | `23-app-split.md` | FSBL / Application 분리 (LRUN 또는 XIP) | 예정 |
 
