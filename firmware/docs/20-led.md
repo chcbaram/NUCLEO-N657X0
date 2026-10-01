@@ -94,6 +94,8 @@ void apMain(void)
 
 ## 3. 클럭 설정 (`bsp.c`)
 
+> 이후 **800 MHz (overdrive) 로 바꿨다** → [22-cpu-800mhz.md](22-cpu-800mhz.md). 아래는 LED 단계 당시의 600 MHz 설정이다.
+
 LED 만 놓고 보면 필요 없지만, 앞으로의 모든 기능이 여기 얹히므로 처음부터 600 MHz 로 잡았다.
 ST 템플릿(`Template_FSBL_LRUN`)의 `SystemClock_Config()` 를 따랐다.
 
