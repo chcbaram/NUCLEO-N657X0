@@ -3,6 +3,7 @@
 
 
 static void bspMpuInit(void);
+static void bspCoreVoltageOverdrive(void);
 static bool bspClockInit(void);
 
 
@@ -87,14 +88,46 @@ static void bspMpuInit(void)
 }
 
 /*
-  NUCLEO-N657X0-Q 클럭 구성
+  V_DDCORE 를 overdrive(0.89 V)로 올린다.
+
+  보드의 외부 레귤레이터 TPS62088 출력은 PB12(PWR_LP) 로 바뀐다.
+    High : 0.89 V (overdrive)    Low : 0.81 V (nominal)
+  ST BSP 의 BSP_SMPS_Init(SMPS_VOLTAGE_OVERDRIVE) 와 같은 핀이다.
+
+  정착 시간 사양은 확인하지 못했다. ST BSP 는 기다리지 않지만 여유로 1 ms 둔다.
+*/
+static void bspCoreVoltageOverdrive(void)
+{
+  GPIO_InitTypeDef gpio = {0};
+
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+
+  gpio.Pin   = GPIO_PIN_12;
+  gpio.Mode  = GPIO_MODE_OUTPUT_PP;
+  gpio.Pull  = GPIO_NOPULL;
+  gpio.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &gpio);
+
+  HAL_Delay(1);
+}
+
+/*
+  NUCLEO-N657X0-Q 클럭 구성 (overdrive)
 
     HSI 64 MHz
-      -> PLL1 : M=4 (16 MHz) -> N=75 -> 1200 MHz
-           IC1  /2  -> CPUCLK  600 MHz
-           IC2  /3  -> SYSCLK  400 MHz  (AHB /2 -> 200 MHz)
-           IC6  /4  -> 300 MHz
-           IC11 /3  -> 400 MHz
+      -> PLL1 : M=4 (16 MHz) -> N=100 -> 1600 MHz
+           IC1  /2  -> CPUCLK  800 MHz
+           IC2  /4  -> SYSCLK  400 MHz  (AHB /2 -> 200 MHz)
+           IC6  /5  -> 320 MHz
+           IC11 /4  -> 400 MHz
+
+  CPU 800 MHz 는 VOS high + V_DDCORE 0.89 V 에서만 허용된다 (DS14791 표 22, VOS low 는 600 MHz).
+  버스 상한(AXI 400 / AHB 200 MHz)은 VOS 와 상관없이 같아서 IC2 이하는 600 MHz 때와 같게 둔다.
+  PLL VCO 범위는 800 ~ 3200 MHz (표 46).
+
+  순서 : 전압을 먼저 올리고 -> VOS high -> 클럭을 올린다.
 
   V_DDCORE 는 보드의 외부 레귤레이터(TPS62088)가 공급하므로
   PWR_EXTERNAL_SOURCE_SUPPLY 를 선택한다. (내부 SMPS 아님)
@@ -109,7 +142,9 @@ static bool bspClockInit(void)
     return false;
   }
 
-  if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK)
+  bspCoreVoltageOverdrive();
+
+  if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE0) != HAL_OK)
   {
     return false;
   }
@@ -144,13 +179,13 @@ static bool bspClockInit(void)
     }
   }
 
-  // 3) PLL1 = 1200 MHz
+  // 3) PLL1 = 1600 MHz
   //
   osc.OscillatorType        = RCC_OSCILLATORTYPE_NONE;
   osc.PLL1.PLLState         = RCC_PLL_ON;
   osc.PLL1.PLLSource        = RCC_PLLSOURCE_HSI;
   osc.PLL1.PLLM             = 4;
-  osc.PLL1.PLLN             = 75;
+  osc.PLL1.PLLN             = 100;
   osc.PLL1.PLLFractional    = 0;
   osc.PLL1.PLLP1            = 1;
   osc.PLL1.PLLP2            = 1;
@@ -179,11 +214,11 @@ static bool bspClockInit(void)
   clk.IC1Selection.ClockSelection  = RCC_ICCLKSOURCE_PLL1;
   clk.IC1Selection.ClockDivider    = 2;
   clk.IC2Selection.ClockSelection  = RCC_ICCLKSOURCE_PLL1;
-  clk.IC2Selection.ClockDivider    = 3;
+  clk.IC2Selection.ClockDivider    = 4;
   clk.IC6Selection.ClockSelection  = RCC_ICCLKSOURCE_PLL1;
-  clk.IC6Selection.ClockDivider    = 4;
+  clk.IC6Selection.ClockDivider    = 5;
   clk.IC11Selection.ClockSelection = RCC_ICCLKSOURCE_PLL1;
-  clk.IC11Selection.ClockDivider   = 3;
+  clk.IC11Selection.ClockDivider   = 4;
 
   if (HAL_RCC_ClockConfig(&clk) != HAL_OK)
   {
