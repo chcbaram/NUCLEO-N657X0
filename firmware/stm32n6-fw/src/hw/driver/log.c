@@ -3,6 +3,10 @@
 
 #ifdef _USE_HW_LOG
 #include "uart.h"
+#include "cli.h"
+#ifdef _USE_HW_RTC
+#include "rtc.h"
+#endif
 
 #ifdef _USE_HW_RTOS
 #define lock()      xSemaphoreTake(mutex_lock, portMAX_DELAY);
@@ -45,6 +49,12 @@ static SemaphoreHandle_t mutex_lock;
 
 
 
+#if CLI_USE(HW_LOG)
+static void cliCmd(cli_args_t *args);
+#endif
+
+
+
 
 
 bool logInit(void)
@@ -68,6 +78,10 @@ bool logInit(void)
 
 
   is_init = true;
+
+#if CLI_USE(HW_LOG)
+  cliAdd("log", cliCmd);
+#endif
 
   return true;
 }
@@ -103,51 +117,83 @@ bool logIsOpen(void)
   return is_open;
 }
 
+// 링 버퍼 : buf_index = 다음에 쓸 위치, buf_length = 남아 있는 바이트 수 (최대 buf_length_max).
+// 가득 차면 가장 오래된 것부터 덮어쓴다. 출력은 logBufDump() 가 오래된 것 → 최신 순으로 한다.
+//
+// 줄 머리. 로그를 버퍼에 넣는 순간에 만든다.
+// rtc 시각이 맞춰져 있으면 그 시각을, 아니면 부팅 후 경과 시간을 넣는다.
+//
+//   [12:34:56]   시각 설정됨
+//   [   12.345]  부팅 후 초.밀리초
+//
+static int logBufHeader(log_buf_t *p_log, char *p_buf, uint32_t size)
+{
+#ifdef _USE_HW_RTC
+  rtc_time_t time;
+
+  if (rtcGetTime(&time) == true)
+  {
+    return snprintf(p_buf, size, "[%02d:%02d:%02d]\t",
+                    time.hours, time.minutes, time.seconds);
+  }
+#endif
+
+  {
+    uint32_t ms = millis();
+
+    return snprintf(p_buf, size, "[%5u.%03u]\t",
+                    (unsigned)(ms / 1000), (unsigned)(ms % 1000));
+  }
+}
+
 bool logBufPrintf(log_buf_t *p_log, char *p_data, uint32_t length)
 {
-  uint32_t buf_last;
-  uint8_t *p_buf;
-  int buf_len;
+  char     line[sizeof(print_buf) + 32];
+  int      line_len;
 
 
-  buf_last = p_log->buf_index + length + 8;
-  if (buf_last > p_log->buf_length_max)
+  line_len = logBufHeader(p_log, line, sizeof(line));
+  if (line_len < 0) line_len = 0;
+  line_len += snprintf(&line[line_len], sizeof(line) - line_len, "%.*s", (int)length, p_data);
+  if (line_len <= 0)
   {
-    p_log->buf_index = 0;
-    buf_last = p_log->buf_index + length + 8;
-
-    if (buf_last > p_log->buf_length_max)
-    {
-      return false;
-    }
+    return false;
   }
-
-  p_buf = &p_log->buf[p_log->buf_index];
-
-  buf_len = snprintf((char *)p_buf, length + 8, "%04X\t%s", p_log->line_index, p_data);
+  if (line_len >= (int)sizeof(line))
+  {
+    line_len = sizeof(line) - 1;
+  }
   p_log->line_index++;
-  p_log->buf_index += buf_len;
 
-
-  if (buf_len + p_log->buf_length <= p_log->buf_length_max)
+  for (int i=0; i<line_len; i++)
   {
-    p_log->buf_length += buf_len;
+    p_log->buf[p_log->buf_index] = line[i];
+    p_log->buf_index = (p_log->buf_index + 1) % p_log->buf_length_max;
   }
+
+  if (p_log->buf_length + line_len < p_log->buf_length_max)
+    p_log->buf_length += line_len;
+  else
+    p_log->buf_length = p_log->buf_length_max;
 
   return true;
 }
 
 void logPrintf(const char *fmt, ...)
 {
+
   va_list args;
   int len;
 
-  if (is_init != true) return;
+  if (is_init != true)
+    return;
 
   lock();
 
   va_start(args, fmt);
-  len = vsnprintf(print_buf, 256, fmt, args);
+  len = vsnprintf(print_buf, sizeof(print_buf), fmt, args);
+  if (len < 0) len = 0;
+  if (len >= (int)sizeof(print_buf)) len = sizeof(print_buf) - 1;
 
   if (is_open == true && is_enable == true)
   {
@@ -178,6 +224,89 @@ int _write(int file, char *ptr, int len)
 
   return len;
 }
+
+
+#if CLI_USE(HW_LOG)
+// 오래된 것 → 최신 순으로 출력한다. 한 바퀴 돌아 덮어쓴 경우 앞부분의 잘린 줄은 건너뛴다.
+// 출력하는 동안 lock 을 잡아 둔다 (그 사이 다른 스레드의 logPrintf 는 기다린다).
+//
+static void logBufDump(log_buf_t *p_log)
+{
+  uint32_t start;
+  uint32_t length;
+
+
+  lock();
+
+  length = p_log->buf_length;
+  start  = (p_log->buf_index + p_log->buf_length_max - length) % p_log->buf_length_max;
+
+  if (length == p_log->buf_length_max)
+  {
+    while (length > 0 && p_log->buf[start] != '\n')
+    {
+      start = (start + 1) % p_log->buf_length_max;
+      length--;
+    }
+    if (length > 0)
+    {
+      start = (start + 1) % p_log->buf_length_max;
+      length--;
+    }
+  }
+
+  while (length > 0 && cliKeepLoop())
+  {
+    uint32_t chunk = p_log->buf_length_max - start;
+
+    if (chunk > length) chunk = length;
+    if (chunk > 64)     chunk = 64;
+
+    cliWrite(&p_log->buf[start], chunk);
+    start   = (start + chunk) % p_log->buf_length_max;
+    length -= chunk;
+  }
+
+  unLock();
+}
+
+void cliCmd(cli_args_t *args)
+{
+  bool ret = false;
+
+
+
+  if (args->argc == 1 && args->isStr(0, "info"))
+  {
+    cliPrintf("boot.line_index %d\n", log_buf_boot.line_index);
+    cliPrintf("boot.buf_length %d\n", log_buf_boot.buf_length);
+    cliPrintf("\n");
+    cliPrintf("list.line_index %d\n", log_buf_list.line_index);
+    cliPrintf("list.buf_length %d\n", log_buf_list.buf_length);
+
+    ret = true;
+  }
+
+  if (args->argc == 1 && args->isStr(0, "boot"))
+  {
+    logBufDump(&log_buf_boot);
+    ret = true;
+  }
+
+  if (args->argc == 1 && args->isStr(0, "list"))
+  {
+    logBufDump(&log_buf_list);
+    ret = true;
+  }
+
+  if (ret == false)
+  {
+    cliPrintf("log info\n");
+    cliPrintf("log boot\n");
+    cliPrintf("log list\n");
+  }
+}
+#endif
 
 
 #endif

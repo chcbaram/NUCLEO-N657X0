@@ -3,6 +3,7 @@
 
 bool hwInit(void)
 {
+  cliInit();
   logInit();
   ledInit();
   uartInit();

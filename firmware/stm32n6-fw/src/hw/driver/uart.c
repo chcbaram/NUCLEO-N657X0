@@ -1,5 +1,6 @@
 #include "uart.h"
 #include "qbuffer.h"
+#include "cli.h"
 
 #ifdef _USE_HW_UART
 
@@ -34,6 +35,9 @@ typedef struct
 
 bool uartInitHw(uint8_t ch);
 static uint32_t uartGetRxIndex(uint8_t ch);
+#if CLI_USE(HW_UART)
+static void cliUart(cli_args_t *args);
+#endif
 
 
 static bool is_init = false;
@@ -70,6 +74,9 @@ bool uartInit(void)
 
   is_init = true;
 
+#if CLI_USE(HW_UART)
+  cliAdd("uart", cliUart);
+#endif
   return true;
 }
 
@@ -453,6 +460,69 @@ uint32_t uartGetTxCnt(uint8_t ch)
 
   return uart_tbl[ch].tx_cnt;
 }
+
+#if CLI_USE(HW_UART)
+void cliUart(cli_args_t *args)
+{
+  bool ret = false;
+
+
+  if (args->argc == 1 && args->isStr(0, "info"))
+  {
+    for (int i=0; i<UART_MAX_CH; i++)
+    {
+      cliPrintf("_DEF_UART%d : %s, %d bps\n", i+1, uart_hw_tbl[i].p_msg, uartGetBaud(i));
+    }
+    ret = true;
+  }
+
+  if (args->argc == 2 && args->isStr(0, "test"))
+  {
+    uint8_t uart_ch;
+
+    uart_ch = constrain(args->getData(1), 1, UART_MAX_CH) - 1;
+
+    if (uart_ch != cliGetPort())
+    {
+      uint8_t rx_data;
+
+      while(1)
+      {
+        if (uartAvailable(uart_ch) > 0)
+        {
+          rx_data = uartRead(uart_ch);
+          cliPrintf("<- _DEF_UART%d RX : 0x%X\n", uart_ch + 1, rx_data);
+        }
+
+        if (cliAvailable() > 0)
+        {
+          rx_data = cliRead();
+          if (rx_data == 'q')
+          {
+            break;
+          }
+          else
+          {
+            uartWrite(uart_ch, &rx_data, 1);
+            cliPrintf("-> _DEF_UART%d TX : 0x%X\n", uart_ch + 1, rx_data);
+          }
+        }
+      }
+    }
+    else
+    {
+      cliPrintf("This is cliPort\n");
+    }
+    ret = true;
+  }
+
+  if (ret == false)
+  {
+    cliPrintf("uart info\n");
+    cliPrintf("uart test ch[1~%d]\n", HW_UART_MAX_CH);
+  }
+}
+#endif
 
 
 #endif

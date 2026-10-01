@@ -10,6 +10,7 @@ extern "C" {
 #include "led.h"
 #include "uart.h"
 #include "log.h"
+#include "cli.h"
 
 
 bool hwInit(void);
