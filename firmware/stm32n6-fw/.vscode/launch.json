@@ -12,11 +12,13 @@
       "serverArgs": ["-m", "1"],
       "runToEntryPoint": "main",
       "osx": {
-        // CubeCLT 1.21.0 으로 통일. (1.22.0 은 macOS 13+ 를 요구해서 못 쓴다)
-        // gdbserver 7.13.0 은 ST-LINK 펌웨어 V3J17M10 이상이 필요하다.
-        "serverpath": "/opt/ST/STM32CubeCLT_1.21.0/STLink-gdb-server/bin/ST-LINK_gdbserver",
-        "stm32cubeprogrammer": "/opt/ST/STM32CubeCLT_1.21.0/STM32CubeProgrammer/bin",
-        "svdFile": "/opt/ST/STM32CubeCLT_1.21.0/STMicroelectronics_CMSIS_SVD/STM32N657.svd"
+        // CubeCLT 는 pkg 를 설치하지 않고 필요한 것만 ~/ST 에 추출해 두고,
+        // 버전 없는 링크로 참조한다. (10-dev-environment.md 4절)
+        //   ln -sfn ~/ST/STM32CubeCLT_<버전> ~/ST/STM32CubeCLT
+        // gdbserver 는 구형 ST-LINK 펌웨어를 거부한다 -> STLinkUpgrade.sh
+        "serverpath": "${userHome}/ST/STM32CubeCLT/STLink-gdb-server/bin/ST-LINK_gdbserver",
+        "stm32cubeprogrammer": "${userHome}/ST/STM32CubeCLT/STM32CubeProgrammer/bin",
+        "svdFile": "${userHome}/ST/STM32CubeCLT/STMicroelectronics_CMSIS_SVD/STM32N657.svd"
       },
       // FSBL 은 BootROM 이 0x34180400 에 적재해 실행하는 이미지다.
       // 하드웨어 리셋으로 진입하는 것이 아니므로, load 후 벡터테이블에서
