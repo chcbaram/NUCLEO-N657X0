@@ -2,11 +2,17 @@
 #include "hw_def.h"
 
 
+static void bspMpuInit(void);
 static bool bspClockInit(void);
 
 
 bool bspInit(void)
 {
+  // DMA 와 공유하는 구역은 캐시를 켜기 전에 non-cacheable 로 지정한다.
+  // 캐시를 켠 뒤에 바꾸면 그 사이에 올라온 캐시 라인이 남는다.
+  //
+  bspMpuInit();
+
   // BootROM 이 DCACHE 를 clean/invalidate 한 뒤 넘겨주지만,
   // 캐시 자체를 켜 두는 것은 FSBL 의 몫이다.
   //
@@ -24,6 +30,60 @@ bool bspInit(void)
   }
 
   return true;
+}
+
+/*
+  .noncacheable 구역을 non-cacheable 로 지정한다.
+
+  CPU 는 D-캐시를 거쳐 메모리를 보지만 DMA 는 SRAM 을 직접 읽고 쓴다.
+  둘이 공유하는 메모리는 여기에 둬야 서로 같은 값을 본다.
+
+    UART RX 버퍼     DMA 가 쓰고 CPU 가 읽는다  -> 캐시되면 CPU 가 옛 값을 읽는다
+    DMA 노드(LLI)    CPU 가 쓰고 DMA 가 읽는다  -> 캐시되면 DMA 가 빈 노드를 읽는다
+
+  변수에 __NON_CACHEABLE 을 붙이면 링커가 이 구역에 모은다.
+  나머지 메모리는 기본 메모리 맵(PRIVDEFENA)을 그대로 쓴다.
+*/
+static void bspMpuInit(void)
+{
+  extern uint32_t __snoncacheable;
+  extern uint32_t __enoncacheable;
+
+  MPU_Attributes_InitTypeDef attr   = {0};
+  MPU_Region_InitTypeDef     region = {0};
+  uint32_t                   begin  = (uint32_t)&__snoncacheable;
+  uint32_t                   end    = (uint32_t)&__enoncacheable;
+  uint32_t                   primask;
+
+
+  primask = __get_PRIMASK();
+  __disable_irq();
+
+  HAL_MPU_Disable();
+
+  if (end > begin)
+  {
+    attr.Number     = MPU_ATTRIBUTES_NUMBER0;
+    attr.Attributes = INNER_OUTER(MPU_NOT_CACHEABLE);
+    HAL_MPU_ConfigMemoryAttributes(&attr);
+
+    // RLAR 의 limit 은 "포함 끝" 이라 end - 1 을 준다.
+    // (HAL 의 GCC 용 __NON_CACHEABLE_SECTION_END 는 -1 이 빠져 있어 32 바이트 넘친다)
+    //
+    region.Enable           = MPU_REGION_ENABLE;
+    region.Number           = MPU_REGION_NUMBER0;
+    region.BaseAddress      = begin;
+    region.LimitAddress     = end - 1;
+    region.AttributesIndex  = MPU_ATTRIBUTES_NUMBER0;
+    region.AccessPermission = MPU_REGION_ALL_RW;
+    region.DisableExec      = MPU_INSTRUCTION_ACCESS_DISABLE;
+    region.IsShareable      = MPU_ACCESS_NOT_SHAREABLE;
+    HAL_MPU_ConfigRegion(&region);
+  }
+
+  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
+
+  __set_PRIMASK(primask);
 }
 
 /*

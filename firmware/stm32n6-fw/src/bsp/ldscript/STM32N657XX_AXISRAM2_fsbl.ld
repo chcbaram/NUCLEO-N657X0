@@ -145,13 +145,17 @@ SECTIONS
 
   } >RAM
 
+  /* DMA 와 공유하는 버퍼. bspInit() 에서 MPU 로 non-cacheable 지정한다.
+     - 입력 섹션 이름은 HAL 의 __NON_CACHEABLE 매크로와 같은 ".noncacheable"
+     - MPU 가 주소를 32 바이트 단위로 자르고 M55 캐시 라인도 32 바이트라서
+       시작/끝을 32 바이트로 맞춘다. 어긋나면 버퍼 일부가 보호 밖으로 빠진다 */
   .noncacheable :
   {
-    . = ALIGN(8);
-    __snoncacheable = .;/* create symbol for start of section */
-    KEEP(*(noncacheable_buffer))
-    . = ALIGN(8);
-    __enoncacheable = .;  /* create symbol for start of section */
+    . = ALIGN(32);
+    __snoncacheable = .;
+    KEEP(*(.noncacheable))
+    . = ALIGN(32);
+    __enoncacheable = .;
   } > RAM
 
   .gnu.sgstubs :
