@@ -2,6 +2,7 @@
 #include "hw_def.h"
 
 
+static void bspDebugOpen(void);
 static void bspMpuInit(void);
 static void bspCoreVoltageOverdrive(void);
 static bool bspClockInit(void);
@@ -9,6 +10,8 @@ static bool bspClockInit(void);
 
 bool bspInit(void)
 {
+  bspDebugOpen();
+
   // DMA 와 공유하는 구역은 캐시를 켜기 전에 non-cacheable 로 지정한다.
   // 캐시를 켠 뒤에 바꾸면 그 사이에 올라온 캐시 라인이 남는다.
   //
@@ -31,6 +34,22 @@ bool bspInit(void)
   }
 
   return true;
+}
+
+/*
+  Cortex-M55 디버그 포트를 연다. (Flash boot 대비)
+
+  BootROM 은 Development boot 에서만 이 값을 써 두고, Flash boot 에서는 닫은 채로 넘긴다.
+  그래서 FSBL 이 직접 연다. 값은 BootROM 이 DEV 모드에서 쓰는 것과 같다.
+    AP_UNLOCK = 0xB4         Cortex-M55 AP 열기
+    DBGCR     = 0xB451B400   AUTH_SEC 0xB4 / AUTH_HDPL 0x51 / UNLOCK 0xB4 (secure + non-secure)
+  DEV boot 에서는 FSBL 진입 때 이미 이 값이라 바뀌는 것이 없다 (확인함).
+  BSEC 클럭은 리셋 때부터 켜져 있다.
+*/
+static void bspDebugOpen(void)
+{
+  BSEC->AP_UNLOCK = 0xB4;
+  BSEC->DBGCR     = 0xB451B400;
 }
 
 /*

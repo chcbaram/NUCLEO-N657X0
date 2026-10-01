@@ -309,8 +309,40 @@ N6 는 CPU 클럭(IC1, 600 MHz)과 SYSCLK(IC2, 400 MHz)이 다르다.
 |---|---|---|
 | 시리얼에 아무것도 안 들어옴 | 테스트 스크립트(pyserial)와 baram-term 이 같은 포트를 동시에 열었다. macOS 는 둘 다 열리지만 수신 데이터를 나눠 가져간다 | baram-term 이 열려 있으면 `baram-ctl` 로만 주고받는다. 바이너리 테스트처럼 직접 열어야 하면 `baram-ctl release` → 테스트 → `resume` |
 | 배너는 나왔는데 에코가 안 됨 | gdb 로 `apMain` 브레이크포인트에서 세운 채 세션을 끝내서 코어가 에코 루프에 들어가지 못했다 | 동작 확인은 `load.sh`(detach 후 실행)로 한다 |
-| **돌고 있는 펌웨어에 SWD 로 붙으면 보드가 멈춤** (`Target unknown error 32` / `Unable to get core ID`, 이후 펌웨어 응답 없음) | 펌웨어 자체는 멈추지 않는다 — 적재 후 6.5 분 동안 30 초마다 CLI 응답 확인. 멈춤은 항상 `load.sh` 나 디버그 스크립트가 **실행 중인 펌웨어에 attach 하는 순간** 일어났다. `load.sh` 의 gdbserver 는 `-k`(`--initialize-reset`) + `--attach` 로 붙는다. LED 펌웨어 때는 같은 방식으로 문제없었다. **근본 원인은 아직 모른다** | **USB 를 뽑았다 꽂아 전원을 재인가**한 뒤 `load.sh`. Programmer 로 NRST 를 걸어도 풀리지 않을 때가 있다 (12 절) |
+| **돌고 있는 펌웨어에 SWD 로 붙으면 가끔 보드가 멈춤** (`Target unknown error 32` / `Unable to get core ID`, 그 순간 펌웨어도 멈춤) | **원인 미확정 — 가끔만 일어난다.** 아래 "SWD attach 시 멈춤 — 조사 기록" 참고 | **USB 를 뽑았다 꽂아 전원을 재인가**. Programmer 로 NRST 를 걸어도 풀리지 않을 때가 있다 |
 | `gdb` 가 엉뚱한 값을 찍음 | 타깃 연결에 실패했는데 `-batch` 가 ELF 의 초기값을 그대로 출력했다 | 출력에 `could not connect` 가 있으면 값을 믿지 않는다 |
+
+### SWD attach 시 멈춤 — 조사 기록
+
+실패한 다섯 번은 모두 **돌고 있는 펌웨어에 디버거가 붙는 순간**이었다. 그 뒤로는 SWD 가
+코어(AP1)에 닿지 못하고 펌웨어도 멈춘다. 하나씩 걸러낸 것:
+
+| 가설 | 판정 | 근거 |
+|---|---|---|
+| 펌웨어가 시간이 지나면 스스로 멈춘다 | 아님 | 적재 후 6.5 분 동안 30 초마다 CLI 응답 정상 |
+| 돌고 있는 펌웨어 위에 적재하면 항상 깨진다 | 아님 | 전원 재인가 후 10 번 연속 성공 (다른 이미지로 바꿔 올린 경우 포함) |
+| BSEC 가 디버그를 잠근다 | 아님 | FSBL 진입 때 이미 `DBGCR=0xB451B400`, `AP_UNLOCK=0xB4` (BootROM 이 DEV 모드에서 연 값). 다시 쓰는 빌드와 안 쓰는 빌드 모두 5/5 통과 |
+| 이전 펌웨어의 캐시·MPU 를 물려받아 옛 코드가 실행된다 | 원인은 아닌 듯 | 물려받는 것은 사실이다 — 붙은 직후 `CCR=0x30201`(I/D 캐시 켜짐), `MPU_CTRL=0x5`. gdbserver `-k --attach` 는 실제로 리셋하지 않고, CMSIS `SCB_EnableI/DCache()` 는 이미 켜져 있으면 무효화하지 않는다. 그래도 위 10 번은 깨지지 않았다 |
+
+**LED 펌웨어 때는 같은 방식으로 수십 번 적재해도 한 번도 깨지지 않았다.** 처음 깨진 것은 UART 를
+붙인 뒤이고, 800 MHz 는 그보다 나중이라 후보에서 빠진다. 그래서 UART 단계에서 들어간 것 중 하나로 본다.
+
+| UART 단계에서 들어간 것 | 디버거와 엮일 수 있는 점 |
+|---|---|
+| GPDMA1 CH0 circular (linked-list) | 멈추지 않고 계속 도는 버스 마스터 |
+| 메인 루프의 DMA 폴링 (`uartAvailable` → `CBR1` 읽기) | CPU 가 주변장치 레지스터를 쉬지 않고 읽는다 |
+| MPU + `.noncacheable` 구역 | 이전 펌웨어의 설정이 그대로 남는다 |
+| GPIO / DMA secure 속성 (`ConfigPinAttributes`, `ConfigChannelAttributes`) | 보안 속성 변경 |
+
+실패한 경우에만 있었던 조건 (다음에 하나씩 재현해 볼 것):
+
+1. **Programmer(Hotplug)** 로 돌고 있는 펌웨어에 붙음 — 성공한 10 번은 전부 `load.sh`(gdbserver)였다
+2. gdb 세션이 코어를 **브레이크포인트에서 멈춘 채 강제 종료**된 뒤 다음 연결
+3. **오래 돌았거나 UART 트래픽이 많았던 뒤** (10 분 방치, 3000 B 에코 테스트 뒤)
+
+`bsp.c` 의 `bspDebugOpen()`(BSEC 로 디버그 포트 열기)은 이 문제와 무관하지만 **Flash boot 에서
+디버거를 붙이려면 필요해서** 남겼다. BootROM 은 Flash boot 에서 디버그를 닫은 채 넘긴다
+([ST 커뮤니티](https://community.st.com/t5/stm32-mcus-products/how-to-allow-debugger-to-attach-on-stm32n6-when-booting-from/td-p/828077)).
 
 ---
 
@@ -337,6 +369,5 @@ USART1 커널 클럭 소스 하나 고르려고 불렀는데, N6 의 모든 주�
 
 - 수신 오류 처리 — 지금은 NVIC 인터럽트를 켜지 않아 ORE/FE 를 처리하지 않는다.
   DMA 가 바이트마다 읽어 가므로 ORE 는 생기지 않을 것으로 보지만 확인하지 않았다
-- **SWD attach 시 멈춤** (10 절) — 시도해 볼 것: `load.sh` 에서 `-k` 를 빼고 붙기,
-  attach 대신 Programmer `-c mode=Hotplug` 로 붙어 리셋한 뒤 적재, 메인 루프가
-  DMA `CBR1` 을 쉬지 않고 읽는 것이 디버그 접근과 부딪히는지
+- **SWD attach 시 멈춤** (10 절) — 남은 조건 세 가지를 하나씩 재현해 방아쇠를 찾는다.
+  실패하면 전원 재인가가 필요하다
