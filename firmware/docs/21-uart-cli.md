@@ -309,7 +309,7 @@ N6 는 CPU 클럭(IC1, 600 MHz)과 SYSCLK(IC2, 400 MHz)이 다르다.
 |---|---|---|
 | 시리얼에 아무것도 안 들어옴 | 테스트 스크립트(pyserial)와 baram-term 이 같은 포트를 동시에 열었다. macOS 는 둘 다 열리지만 수신 데이터를 나눠 가져간다 | baram-term 이 열려 있으면 `baram-ctl` 로만 주고받는다. 바이너리 테스트처럼 직접 열어야 하면 `baram-ctl release` → 테스트 → `resume` |
 | 배너는 나왔는데 에코가 안 됨 | gdb 로 `apMain` 브레이크포인트에서 세운 채 세션을 끝내서 코어가 에코 루프에 들어가지 못했다 | 동작 확인은 `load.sh`(detach 후 실행)로 한다 |
-| **돌고 있는 펌웨어에 SWD 로 붙으면 가끔 보드가 멈춤** (`Target unknown error 32` / `Unable to get core ID`, 그 순간 펌웨어도 멈춤) | **원인 미확정 — 가끔만 일어난다.** 아래 "SWD attach 시 멈춤 — 조사 기록" 참고 | **USB 를 뽑았다 꽂아 전원을 재인가**. Programmer 로 NRST 를 걸어도 풀리지 않을 때가 있다 |
+| **돌고 있는 펌웨어에 SWD 로 붙으면 가끔 보드가 멈춤** (`Target unknown error 32` / `Unable to get core ID`, 그 순간 펌웨어도 멈춤) | 돌고 있는 코어에 리셋 없이 붙는 `-k --attach` 가 방아쇠. 그 안에서 무엇이 걸리는지는 미확정 (아래 조사 기록) | **`load.sh` 를 cortex-debug 와 같은 launch 방식(`--halt`, `--attach` 없음)으로 바꿨다** — 붙는 순간 리셋하고 BootROM 에서 세우므로 돌고 있는 코어에 붙지 않는다. 이미 멈췄다면 USB 재연결 |
 | `gdb` 가 엉뚱한 값을 찍음 | 타깃 연결에 실패했는데 `-batch` 가 ELF 의 초기값을 그대로 출력했다 | 출력에 `could not connect` 가 있으면 값을 믿지 않는다 |
 
 ### SWD attach 시 멈춤 — 조사 기록
@@ -340,6 +340,17 @@ N6 는 CPU 클럭(IC1, 600 MHz)과 SYSCLK(IC2, 400 MHz)이 다르다.
 2. gdb 세션이 코어를 **브레이크포인트에서 멈춘 채 강제 종료**된 뒤 다음 연결
 3. **오래 돌았거나 UART 트래픽이 많았던 뒤** (10 분 방치, 3000 B 에코 테스트 뒤)
 
+#### 해결 — attach 하지 않고 launch 한다
+
+사용자가 **VSCode launch 로는 항상 동작했다**고 알려 줘서 옵션을 비교했다. cortex-debug 는
+`--attach` 없이 `--halt` 로 띄운다. 같은 옵션으로 붙어 보면 PC 가 BootROM(`0x1800_3A1A`)에 있고
+캐시(`CCR=0x201`)·MPU(`MPU_CTRL=0x4`)가 꺼져 있다. 즉 **붙기 전에 리셋한다.** `load.sh` 를 이
+방식으로 바꿨다 ([11](11-project-skeleton.md) 6절). 돌고 있는 코어에 붙는 동작 자체가 없어지므로
+방아쇠를 피한다. 바꾼 뒤 돌고 있는 펌웨어 위 적재 5/5 통과.
+
+방아쇠가 attach 안의 무엇인지(위 후보 중 무엇과 엮이는지)는 밝히지 못했다. 피해 가는 방법을 찾은
+것이지 원인을 고친 것은 아니다.
+
 `bsp.c` 의 `bspDebugOpen()`(BSEC 로 디버그 포트 열기)은 이 문제와 무관하지만 **Flash boot 에서
 디버거를 붙이려면 필요해서** 남겼다. BootROM 은 Flash boot 에서 디버그를 닫은 채 넘긴다
 ([ST 커뮤니티](https://community.st.com/t5/stm32-mcus-products/how-to-allow-debugger-to-attach-on-stm32n6-when-booting-from/td-p/828077)).
@@ -369,5 +380,5 @@ USART1 커널 클럭 소스 하나 고르려고 불렀는데, N6 의 모든 주�
 
 - 수신 오류 처리 — 지금은 NVIC 인터럽트를 켜지 않아 ORE/FE 를 처리하지 않는다.
   DMA 가 바이트마다 읽어 가므로 ORE 는 생기지 않을 것으로 보지만 확인하지 않았다
-- **SWD attach 시 멈춤** (10 절) — 남은 조건 세 가지를 하나씩 재현해 방아쇠를 찾는다.
-  실패하면 전원 재인가가 필요하다
+- **SWD attach 시 멈춤** (10 절) — `load.sh` 를 launch 방식으로 바꿔 피했다. 방아쇠가 무엇인지는
+  미확정. 다시 attach 가 필요해지면(돌고 있는 상태를 그대로 보고 싶을 때) 남은 조건을 재현해 찾는다

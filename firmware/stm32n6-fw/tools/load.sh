@@ -50,8 +50,14 @@ GDB_PORT=${GDB_PORT:-61234}
 
 [ -f "$ELF" ] || { echo "elf 가 없다: $ELF  (먼저 빌드할 것)"; exit 1; }
 
+# VSCode 의 cortex-debug launch 와 같은 옵션으로 띄운다 (-d = --swd, --halt, -m 1).
+#
+#   예전에는 -k --attach 로 돌고 있는 펌웨어에 리셋 없이 붙었는데, 가끔 그 순간 보드가
+#   멈추고 전원 재인가가 필요했다 (docs/21-uart-cli.md 10 절). cortex-debug launch 는
+#   --attach 없이 --halt 로 시작하고, 이 방식은 항상 동작했다.
+#
 "$CLT/STLink-gdb-server/bin/ST-LINK_gdbserver" \
-  -p "$GDB_PORT" -l 1 -m 1 -k -e -d --attach \
+  -p "$GDB_PORT" -l 1 -d --halt -m 1 \
   -cp "$CLT/STM32CubeProgrammer/bin" > /tmp/stm32n6-gdbserver.log 2>&1 &
 SRV_PID=$!
 trap 'kill $SRV_PID 2>/dev/null || true' EXIT

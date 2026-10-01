@@ -22,8 +22,8 @@ cmake -S . -B build && cmake --build build -j20
 ```
 
 연결이 안 되면 **JP2(BOOT1)가 1 쪽(pin 2-3)인지** 먼저 확인한다.
-`load.sh` 가 `Target unknown error 32` 로 실패하면 **USB 를 뽑았다 꽂은 뒤** 다시 한다
-(돌고 있는 펌웨어에 붙을 때 생기는 문제, 원인 미확정 → [21](21-uart-cli.md) 10절).
+`load.sh` 는 VSCode launch 와 같은 방식(붙기 전에 리셋)으로 적재한다. 그래도 `Target unknown error 32` 로
+실패하면 **USB 를 뽑았다 꽂은 뒤** 다시 한다 ([21](21-uart-cli.md) 10절).
 
 ```bash
 export STM32CLT=~/ST/STM32CubeCLT
@@ -41,14 +41,12 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 
 ### 다음 작업
 
-1. **SWD attach 시 멈춤 원인 찾기** — 돌고 있는 펌웨어에 디버거가 붙을 때 가끔 보드가 멈춘다.
-   UART 단계에서 들어간 것(GPDMA circular, DMA 폴링 루프, MPU, secure 속성) 중 하나로 본다.
-   후보를 하나씩 뺀 빌드로, 실패했던 조건을 재현한다 → [21](21-uart-cli.md) 10절
-2. BootROM 트레이스 파서 — `0x3410_37F0`(SEC) / `0x2410_77F0`(NSEC) 를 덮기 전에 읽어 출력
-3. 외부 NOR (XSPI2) — 여기서 `HAL_XSPI/BSEC` 재활성화, OTP `VDDIO3_HSLV` 판단 필요
-4. 서명 → 플래시 기록 → Flash boot 전환 (BOOT0=0, BOOT1=0)
+1. BootROM 트레이스 파서 — `0x3410_37F0`(SEC) / `0x2410_77F0`(NSEC) 를 덮기 전에 읽어 출력
+2. 외부 NOR (XSPI2) — 여기서 `HAL_XSPI/BSEC` 재활성화, OTP `VDDIO3_HSLV` 판단 필요
+3. 서명 → 플래시 기록 → Flash boot 전환 (BOOT0=0, BOOT1=0)
    - Flash boot 에서는 BootROM 이 디버그 포트를 닫는다. `bspDebugOpen()` 이 이미 다시 연다
-5. FSBL / Application 분리 (LRUN 또는 XIP)
+4. FSBL / Application 분리 (LRUN 또는 XIP)
+5. (보류) SWD attach 시 멈춤의 방아쇠 규명 — launch 방식으로 피했다 → [21](21-uart-cli.md) 10절
 
 ## 문서 번호 규칙
 

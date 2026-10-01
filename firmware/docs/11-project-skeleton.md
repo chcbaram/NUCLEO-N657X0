@@ -202,8 +202,27 @@ STM32_Programmer_CLI -c port=SWD ap=1 mode=Hotplug -w build/stm32n6-fw.elf -s 0x
 적재해 둔 이미지의 실행이 멈춘다. 실제로 적재 직후 GPIO 레지스터를 읽어 확인하려 했더니
 BootROM 이 남긴 값(PG10 open-drain)만 보였다.
 
-그래서 `tools/load.sh` 는 **ST-LINK gdbserver + arm-none-eabi-gdb** 로,
-리셋 없이 `load` 한 뒤 벡터테이블에서 SP/PC 를 직접 세팅하는 방식을 쓴다.
+문제는 **적재한 뒤에** 리셋되는 것이다. 그래서 `tools/load.sh` 는 **ST-LINK gdbserver +
+arm-none-eabi-gdb** 로 붙어 `load` 한 뒤, 벡터테이블에서 SP/PC 를 직접 세팅하고 리셋 없이 놓는다.
+
+#### gdbserver 는 launch 방식으로 띄운다 (`--attach` 쓰지 않음)
+
+```bash
+ST-LINK_gdbserver -p 61234 -l 1 -d --halt -m 1 -cp <CubeProgrammer/bin>
+```
+
+VSCode cortex-debug 의 launch 와 같은 옵션이다. 붙는 순간 **리셋하고 BootROM 에서 세운다.**
+그래서 이전 펌웨어의 상태를 하나도 물려받지 않고, **적재보다 먼저** 리셋되니 위 문제와도 무관하다.
+
+| 붙은 직후 | 예전 `-k --attach` | **지금 launch (`--halt`)** |
+|---|---|---|
+| PC | 돌던 펌웨어 안 (`uartAvailable`) | **BootROM (`0x1800_3A1A`)** |
+| `CCR` (캐시) | `0x30201` — I/D 캐시 켜짐 | `0x201` — 꺼짐 |
+| `MPU_CTRL` | `0x5` — 이전 설정 살아 있음 | `0x4` — 꺼짐 |
+
+예전 `-k --attach` 는 이름과 달리 리셋하지 않고 돌고 있는 코어에 그대로 붙었는데, UART 를 붙인
+뒤로 **가끔 그 순간 보드가 멈춰 전원 재인가가 필요했다** ([21](21-uart-cli.md) 10절).
+VSCode launch 로는 한 번도 그런 일이 없었다는 관찰에서 옵션 차이를 찾았다.
 
 ```gdb
 load
