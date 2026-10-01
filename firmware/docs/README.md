@@ -2,7 +2,7 @@
 
 STM32N657X0H3Q / MB1940-C02 보드 기준 펌웨어 개발 참고 문서.
 
-## 현재 상태 (2026-08-26)
+## 현재 상태 (2026-10-01)
 
 | | |
 |---|---|
@@ -10,22 +10,32 @@ STM32N657X0H3Q / MB1940-C02 보드 기준 펌웨어 개발 참고 문서.
 | **부트 점퍼** | **JP2(BOOT1) = 1 → Development boot.** 이 상태여야 SWD 가 붙는다 |
 | 펌웨어 | `firmware/stm32n6-fw` — FSBL 골격 + LED 블링크 동작 확인 |
 | 클럭 | 600 MHz (HSI → PLL1 1200 MHz → IC1 /2) |
-| 빌드 | 15,456 B / 511 KB (2.95%) |
+| 빌드 | 15,456 B / 511 KB (2.95%) — arm-none-eabi-gcc 15.3.1 로 재빌드 확인 |
+| 툴 | CubeCLT 1.22.0 에서 필요한 것만 `~/ST` 에 추출 (Programmer 2.23.0 / gdbserver 7.14.0). 적재·SWD 확인 완료 |
 
 ### 바로 다시 시작하기
 
 ```bash
 cd firmware/stm32n6-fw
-cmake -S . -B build && cmake --build build -j8
+cmake -S . -B build && cmake --build build -j20
 ./tools/load.sh                       # SRAM 적재 후 실행 (LD7 파란색 500ms 점멸)
 ```
 
 연결이 안 되면 **JP2(BOOT1)가 1 쪽(pin 2-3)인지** 먼저 확인한다.
 
 ```bash
-/opt/ST/STM32CubeCLT_1.21.0/STM32CubeProgrammer/bin/STM32_Programmer_CLI \
-  -c port=SWD ap=1 mode=Hotplug
+export STM32CLT=~/ST/STM32CubeCLT
+$STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hotplug
 ```
+
+> CubeCLT 는 **pkg 를 설치하지 않는다.** 3.3 GB 중 쓰는 것은 225 MB 뿐이고,
+> 설치하면 `/etc/paths` 맨 앞을 차지해 Homebrew gcc/cmake 를 가린다.
+> 필요한 것만 `~/ST` 에 추출하고 버전 없는 링크로 참조한다 →
+> [10-dev-environment.md](10-dev-environment.md#4-st-툴체인--pkg-를-설치하지-않고-필요한-것만-쓴다)
+>
+> ```bash
+> ln -sfn ~/ST/STM32CubeCLT_<버전> ~/ST/STM32CubeCLT
+> ```
 
 ### 다음 작업
 
@@ -63,7 +73,7 @@ cmake -S . -B build && cmake --build build -j8
 
 | 문서 | 내용 | 상태 |
 |---|---|---|
-| [10-dev-environment.md](10-dev-environment.md) | 툴체인 점검, CubeCLT 버전 선택, 보드 연결 확인 | ✅ |
+| [10-dev-environment.md](10-dev-environment.md) | 툴체인 점검, CubeCLT 설치/경로 규칙, 보드 연결 확인 | ✅ |
 | [11-project-skeleton.md](11-project-skeleton.md) | `stm32n6-fw` 디렉터리/CMake 구조, 링커·스타트업, 빌드·적재 방법 | ✅ |
 
 ### 구현 기록
