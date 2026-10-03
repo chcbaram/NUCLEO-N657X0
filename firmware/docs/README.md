@@ -8,7 +8,7 @@ STM32N657X0H3Q / MB1940-C02 보드 기준 펌웨어 개발 참고 문서.
 |---|---|
 | 보드 | NUCLEO-N657X0-Q (MB1940-C02), Device ID `0x486` Rev B |
 | **부트 점퍼** | **JP2(BOOT1) = 1 → Development boot.** 이 상태여야 SWD 가 붙는다 |
-| 펌웨어 | `firmware/stm32n6-fw` — FSBL 골격 + LED + **UART(VCP, DMA 수신) + 로그 + CLI + BootROM 트레이스 + 외부 NOR(XSPI2) + RTC/리셋 + Flash boot(외부 로더)** 동작 확인 |
+| 펌웨어 | `firmware/stm32n6-fw` — FSBL 골격 + LED + **UART(VCP, DMA 수신) + 로그 + CLI + BootROM 트레이스 + 외부 NOR(XSPI2) + RTC/리셋 + Flash boot(외부 로더) + UART 다운로드** 동작 확인 |
 | 클럭 | **800 MHz overdrive** (HSI → PLL1 1600 MHz → IC1 /2, V<sub>DDCORE</sub> 0.89 V) → [22](22-cpu-800mhz.md) |
 | 빌드 | 88,720 B / 511 KB (16.96%) — arm-none-eabi-gcc 15.3.1 |
 | 툴 | CubeCLT 1.22.0 에서 필요한 것만 `~/ST` 에 추출 (Programmer 2.23.0 / gdbserver 7.14.0). 적재·SWD 확인 완료 |
@@ -41,8 +41,7 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 
 ### 다음 작업
 
-1. UART CLI 로 플래시 쓰기 (디버거 없이 펌웨어 교체)
-2. FSBL / Application 분리 (LRUN 또는 XIP)
+1. FSBL / Application 분리 (LRUN 또는 XIP) — FSBL 이 TAG 를 보고 앱을 실행 (`FW_JUMP`)
 
 ## 문서 번호 규칙
 
@@ -84,7 +83,8 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 | [25-rtc-reset.md](25-rtc-reset.md) | RTC(LSE, 백업 레지스터) + 리셋 원인 / 재부팅 CLI | ✅ |
 | [26-flash-boot.md](26-flash-boot.md) | 서명 → 외부 로더로 NOR 기록 → Flash boot (`flash.py`, 태스크 `flash-ext`) | ✅ |
 | [27-swd-attach.md](27-swd-attach.md) | 돌고 있는 FSBL 에 디버거가 붙으면 멈추던 문제 — `SystemInit()` 의 SYSCFG 클럭 끄기 / `INITSVTORCR` | ✅ |
-| `28-app-split.md` | FSBL / Application 분리 (LRUN 또는 XIP) | 예정 |
+| [28-uart-download.md](28-uart-download.md) | UART(CLI 포트) 로 FSBL / 앱 / 데이터 다운로드, 보율 올리기 (4 Mbps 2.5 s) | ✅ |
+| `29-app-split.md` | FSBL / Application 분리 (LRUN 또는 XIP) | 예정 |
 
 ## 그림
 

@@ -107,6 +107,9 @@
 #define VERSION_MAGIC_NUMBER      0x56455220    // "VER "
 #define TAG_MAGIC_NUMBER          0x54414720    // "TAG "
 
+#define HW_DEV_MODE_BOOT          0
+#define HW_DEV_MODE_APP           1
+
 typedef union
 {
   uint8_t  u8Data[4];
@@ -132,6 +135,7 @@ typedef struct
   char     version_str[32];
   char     name_str[32];
   uint32_t firm_addr;
+  uint32_t firm_size;         // 링커가 아는 이미지 크기. 0 이면 미신고 (weact-h750 과 같다)
 } firm_ver_t;
 
 typedef struct 

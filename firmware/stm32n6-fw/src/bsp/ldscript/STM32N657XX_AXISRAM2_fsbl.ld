@@ -86,6 +86,19 @@ SECTIONS
     . = ALIGN(4);
   } >RAM
 
+  /* 모듈 디스크립터 표.
+     ap/modules 의 각 모듈이 MODULE_DEF() 로 자기 디스크립터(const)를 여기에 심는다.
+     moduleInit() 이 _smodule ~ _emodule 을 훑어 우선순위 순으로 init() 을 부른다. */
+  .module :
+  {
+    . = ALIGN(4);
+    _smodule = .;
+    KEEP (*(.module))
+    KEEP (*(.module*))
+    _emodule = .;
+    . = ALIGN(4);
+  } >RAM
+
   .ARM.extab   : {
     . = ALIGN(4);
     *(.ARM.extab* .gnu.linkonce.armextab.*)

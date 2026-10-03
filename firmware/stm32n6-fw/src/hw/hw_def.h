@@ -10,6 +10,7 @@
 
 #define _USE_HW_BOOTROM
 #define _USE_HW_OTP
+#define _USE_HW_FLASH
 
 
 #define _USE_HW_LED
@@ -50,6 +51,24 @@
 #define      HW_XSPI_ADDR           0x70000000
 #define      HW_XSPI_SIZE           (64*1024*1024)
 
+#define _USE_HW_CMD
+#define      HW_CMD_MAX_DATA_LENGTH 1024
+#define      HW_CMD_UART_CH         HW_UART_CH_CLI
+
+
+#define HW_DEV_MODE                 HW_DEV_MODE_BOOT
+
+#define FLASH_ADDR_BOOT             0x70000000
+#define FLASH_ADDR_BOOT2            0x70040000
+#define FLASH_SIZE_BOOT             (256*1024)
+#define FLASH_ADDR_FIRM             0x70100000
+#define FLASH_SIZE_FIRM             (16*1024*1024)
+#define FLASH_SIZE_TAG              0x1000
+#define FLASH_SIZE_VEC              0x400
+#define FLASH_ADDR_FIRM_VEC         (FLASH_ADDR_FIRM + FLASH_SIZE_TAG)
+#define FLASH_ADDR_DATA             0x71100000
+#define FLASH_SIZE_DATA             (HW_XSPI_ADDR + HW_XSPI_SIZE - FLASH_ADDR_DATA)
+
 
 
 //-- CLI
@@ -58,6 +77,7 @@
 #define _USE_CLI_HW_UART            1
 #define _USE_CLI_HW_RTC             1
 #define _USE_CLI_HW_RESET           1
+#define _USE_CLI_HW_MODULE          1
 #define _USE_CLI_HW_BOOTROM         1
 #define _USE_CLI_HW_OTP             1
 #define _USE_CLI_HW_XSPI            1

@@ -28,6 +28,7 @@ bool hwInit(void)
   bootromInit();
   otpInit();
   xspiInit();
+  flashInit();
 
   return true;
 }

@@ -5,7 +5,7 @@
 #ifdef _USE_HW_UART
 
 
-#define UART_RX_BUF_LENGTH        1024
+#define UART_RX_BUF_LENGTH        4096        // cmd 패킷(최대 1034 B)이 통째로 들어갈 만큼
 
 
 
@@ -293,7 +293,9 @@ uint32_t uartWrite(uint8_t ch, uint8_t *p_data, uint32_t length)
       {
         break;
       }
-      if (HAL_UART_Transmit(uart_tbl[ch].p_huart, p_data, length, 100) == HAL_OK)
+      // 115200 에서 1 KB 는 약 90 ms 다. 길이에 비례해 기다린다 (10 bit/byte).
+      if (HAL_UART_Transmit(uart_tbl[ch].p_huart, p_data, length,
+                            100 + (length * 10 * 1000) / uart_tbl[ch].baud) == HAL_OK)
       {
         ret = length;
       }

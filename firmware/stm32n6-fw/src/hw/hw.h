@@ -16,6 +16,8 @@ extern "C" {
 #include "bootrom.h"
 #include "otp.h"
 #include "xspi.h"
+#include "flash.h"
+#include "cmd.h"
 
 
 bool hwInit(void);
