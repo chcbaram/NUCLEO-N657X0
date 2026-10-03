@@ -8,7 +8,7 @@ STM32N657X0H3Q / MB1940-C02 보드 기준 펌웨어 개발 참고 문서.
 |---|---|
 | 보드 | NUCLEO-N657X0-Q (MB1940-C02), Device ID `0x486` Rev B |
 | **부트 점퍼** | **JP2(BOOT1) = 1 → Development boot.** 이 상태여야 SWD 가 붙는다 |
-| 펌웨어 | `firmware/stm32n6-fw` — FSBL 골격 + LED + **UART(VCP, DMA 수신) + 로그 + CLI** 동작 확인 |
+| 펌웨어 | `firmware/stm32n6-fw` — FSBL 골격 + LED + **UART(VCP, DMA 수신) + 로그 + CLI + BootROM 트레이스** 동작 확인 |
 | 클럭 | **800 MHz overdrive** (HSI → PLL1 1600 MHz → IC1 /2, V<sub>DDCORE</sub> 0.89 V) → [22](22-cpu-800mhz.md) |
 | 빌드 | 88,720 B / 511 KB (16.96%) — arm-none-eabi-gcc 15.3.1 |
 | 툴 | CubeCLT 1.22.0 에서 필요한 것만 `~/ST` 에 추출 (Programmer 2.23.0 / gdbserver 7.14.0). 적재·SWD 확인 완료 |
@@ -41,12 +41,11 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 
 ### 다음 작업
 
-1. BootROM 트레이스 파서 — `0x3410_37F0`(SEC) / `0x2410_77F0`(NSEC) 를 덮기 전에 읽어 출력
-2. 외부 NOR (XSPI2) — 여기서 `HAL_XSPI/BSEC` 재활성화, OTP `VDDIO3_HSLV` 판단 필요
-3. 서명 → 플래시 기록 → Flash boot 전환 (BOOT0=0, BOOT1=0)
+1. 외부 NOR (XSPI2) — 여기서 `HAL_XSPI/BSEC` 재활성화, OTP `VDDIO3_HSLV` 판단 필요
+2. 서명 → 플래시 기록 → Flash boot 전환 (BOOT0=0, BOOT1=0)
    - Flash boot 에서는 BootROM 이 디버그 포트를 닫는다. `bspDebugOpen()` 이 이미 다시 연다
-4. FSBL / Application 분리 (LRUN 또는 XIP)
-5. (보류) SWD attach 시 멈춤의 방아쇠 규명 — launch 방식으로 피했다 → [21](21-uart-cli.md) 10절
+3. FSBL / Application 분리 (LRUN 또는 XIP)
+4. (보류) SWD attach 시 멈춤의 방아쇠 규명 — launch 방식으로 피했다 → [21](21-uart-cli.md) 10절
 
 ## 문서 번호 규칙
 
@@ -83,8 +82,9 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 | [20-led.md](20-led.md) | LED 구동 + 빌드/적재/검증 루프 확립 | ✅ |
 | [21-uart-cli.md](21-uart-cli.md) | UART(VCP) + 로그 + CLI, **DMA 수신과 D-캐시**, 로그 링 버퍼 | ✅ |
 | [22-cpu-800mhz.md](22-cpu-800mhz.md) | CPU 800 MHz (overdrive), 실측 793 MHz | ✅ |
-| `23-flash-boot.md` | 서명 → 외부 NOR 기록 → Flash boot 전환 | 예정 |
-| `24-app-split.md` | FSBL / Application 분리 (LRUN 또는 XIP) | 예정 |
+| [23-bootrom-trace.md](23-bootrom-trace.md) | BootROM 트레이스 파서 (직접 작성, 라이선스 이유) | ✅ |
+| `24-flash-boot.md` | 서명 → 외부 NOR 기록 → Flash boot 전환 | 예정 |
+| `25-app-split.md` | FSBL / Application 분리 (LRUN 또는 XIP) | 예정 |
 
 ## 그림
 

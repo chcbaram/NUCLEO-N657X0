@@ -11,6 +11,7 @@ extern "C" {
 #include "uart.h"
 #include "log.h"
 #include "cli.h"
+#include "bootrom.h"
 
 
 bool hwInit(void);

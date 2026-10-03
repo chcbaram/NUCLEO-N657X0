@@ -30,11 +30,14 @@
 #define      HW_LOG_BOOT_BUF_MAX    2048
 #define      HW_LOG_LIST_BUF_MAX    4096
 
+#define _USE_HW_BOOTROM
+
 
 //-- CLI
 //
 #define _USE_CLI_HW_LOG             1
 #define _USE_CLI_HW_UART            1
+#define _USE_CLI_HW_BOOTROM         1
 
 
 #endif

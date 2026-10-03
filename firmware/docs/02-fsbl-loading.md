@@ -302,6 +302,8 @@ ROM은 실행 로그를 AXISRAM2 에 남긴다. FSBL 초반에 읽어서 UART로
 
 > **주의** — 트레이스를 읽을 계획이면 `0x3410_37F0` / `0x2410_77F0` 을 덮기 전에 먼저 파싱해야 한다.
 
+> 구현: [23-bootrom-trace.md](23-bootrom-trace.md) — 부팅 배너 요약 + CLI `bootrom trace`.
+
 ### 9.2 상태 워드
 
 ROM은 `uint64_t` 상태 워드에 비트를 세운다 (UM3234 Table 20/21). 주요 비트:
