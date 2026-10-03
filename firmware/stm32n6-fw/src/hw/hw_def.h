@@ -34,6 +34,11 @@
 #define      HW_LOG_LIST_BUF_MAX    4096
 
 
+#define _USE_HW_XSPI
+#define      HW_XSPI_ADDR           0x70000000
+#define      HW_XSPI_SIZE           (64*1024*1024)
+
+
 
 //-- CLI
 //
@@ -41,6 +46,7 @@
 #define _USE_CLI_HW_UART            1
 #define _USE_CLI_HW_BOOTROM         1
 #define _USE_CLI_HW_OTP             1
+#define _USE_CLI_HW_XSPI            1
 
 
 #endif

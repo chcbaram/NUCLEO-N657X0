@@ -20,10 +20,12 @@ bool hwInit(void)
   logPrintf("Booting..Date \t\t: %s\r\n", __DATE__);
   logPrintf("Booting..Time \t\t: %s\r\n", __TIME__);
   logPrintf("Booting..Addr \t\t: 0x%X\r\n", (unsigned int)SCB->VTOR);
-  bootromInit();
-  otpInit();
 
   logPrintf("\n");
+
+  bootromInit();
+  otpInit();
+  xspiInit();
 
   return true;
 }

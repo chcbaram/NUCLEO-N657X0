@@ -13,6 +13,7 @@ extern "C" {
 #include "cli.h"
 #include "bootrom.h"
 #include "otp.h"
+#include "xspi.h"
 
 
 bool hwInit(void);
