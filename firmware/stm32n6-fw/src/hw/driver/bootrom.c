@@ -105,12 +105,63 @@ static const trace_name_t trace_name_tbl[] =
 static const char *level_str[] = {"INFO ", "WARN ", "ERR  ", "DEBUG"};
 
 
+static const char *traceName(uint32_t code);
+static void        traceIterInit(trace_iter_t *p_iter, uint32_t addr);
+static bool        traceIterNext(trace_iter_t *p_iter, trace_t *p_trace);
+static void        tracePrint(char sec, const trace_t *p_trace);
+static void        bootromSummary(char *p_buf, uint32_t size);
 #if CLI_USE(HW_BOOTROM)
-static void cliCmd(cli_args_t *args);
+static void        cliCmd(cli_args_t *args);
 #endif
 
 
 
+
+bool bootromInit(void)
+{
+  char buf[96];
+
+
+  bootromSummary(buf, sizeof(buf));
+  logPrintf("Booting..ROM  \t\t: %s\r\n", buf);
+
+#if CLI_USE(HW_BOOTROM)
+  cliAdd("bootrom", cliCmd);
+#endif
+  return true;
+}
+
+/* secure / non-secure 두 버퍼를 타임스탬프 순으로 합쳐 출력한다. */
+void bootromPrintTrace(void)
+{
+  trace_iter_t iter[2];
+  trace_t      trace[2];
+  bool         valid[2];
+  const char   sec_ch[2] = {'S', 'N'};
+  uint32_t     cnt = 0;
+
+
+  traceIterInit(&iter[0], TRACE_SEC_ADDR);
+  traceIterInit(&iter[1], TRACE_NSEC_ADDR);
+  valid[0] = traceIterNext(&iter[0], &trace[0]);
+  valid[1] = traceIterNext(&iter[1], &trace[1]);
+
+  cliPrintf("S/N  timestamp level code       name / args\n");
+  while (valid[0] || valid[1])
+  {
+    int i;
+
+    if (valid[0] && valid[1])
+      i = (trace[0].ts <= trace[1].ts) ? 0 : 1;
+    else
+      i = valid[0] ? 0 : 1;
+
+    tracePrint(sec_ch[i], &trace[i]);
+    cnt++;
+    valid[i] = traceIterNext(&iter[i], &trace[i]);
+  }
+  cliPrintf("%u traces\n", (unsigned)cnt);
+}
 
 static const char *traceName(uint32_t code)
 {
@@ -190,38 +241,6 @@ static void tracePrint(char sec, const trace_t *p_trace)
   cliPrintf("%s\n", buf);
 }
 
-/* secure / non-secure 두 버퍼를 타임스탬프 순으로 합쳐 출력한다. */
-void bootromPrintTrace(void)
-{
-  trace_iter_t iter[2];
-  trace_t      trace[2];
-  bool         valid[2];
-  const char   sec_ch[2] = {'S', 'N'};
-  uint32_t     cnt = 0;
-
-
-  traceIterInit(&iter[0], TRACE_SEC_ADDR);
-  traceIterInit(&iter[1], TRACE_NSEC_ADDR);
-  valid[0] = traceIterNext(&iter[0], &trace[0]);
-  valid[1] = traceIterNext(&iter[1], &trace[1]);
-
-  cliPrintf("S/N  timestamp level code       name / args\n");
-  while (valid[0] || valid[1])
-  {
-    int i;
-
-    if (valid[0] && valid[1])
-      i = (trace[0].ts <= trace[1].ts) ? 0 : 1;
-    else
-      i = valid[0] ? 0 : 1;
-
-    tracePrint(sec_ch[i], &trace[i]);
-    cnt++;
-    valid[i] = traceIterNext(&iter[i], &trace[i]);
-  }
-  cliPrintf("%u traces\n", (unsigned)cnt);
-}
-
 /* 부팅 배너에 찍을 요약 : 버전, 부트 동작, 칩 모드, 리셋 원인, 에러 수 */
 static void bootromSummary(char *p_buf, uint32_t size)
 {
@@ -256,21 +275,6 @@ static void bootromSummary(char *p_buf, uint32_t size)
   snprintf(p_buf, size, "v0x%X %s %s reset=%s traces=%u err=%u",
            (unsigned)ver, action, mode, reset, (unsigned)cnt, (unsigned)err_cnt);
 }
-
-bool bootromInit(void)
-{
-  char buf[96];
-
-
-  bootromSummary(buf, sizeof(buf));
-  logPrintf("Booting..ROM  \t\t: %s\r\n", buf);
-
-#if CLI_USE(HW_BOOTROM)
-  cliAdd("bootrom", cliCmd);
-#endif
-  return true;
-}
-
 
 #if CLI_USE(HW_BOOTROM)
 void cliCmd(cli_args_t *args)

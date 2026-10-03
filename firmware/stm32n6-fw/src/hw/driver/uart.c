@@ -200,124 +200,6 @@ bool uartSetDriver(uint8_t ch, uart_driver_t *p_driver)
   return true;
 }
 
-bool uartInitHw(uint8_t ch)
-{
-  if (ch == _DEF_UART1)
-  {
-    RCC_PeriphCLKInitTypeDef clk_cfg  = {0};
-    GPIO_InitTypeDef         gpio_cfg = {0};
-    DMA_NodeConfTypeDef      node_cfg = {0};
-    DMA_HandleTypeDef       *p_hdma   = uart_hw_tbl[ch].p_hdma_rx;
-
-
-    // 커널 클럭 : PCLK2 (200 MHz, bspClockInit 참고)
-    //
-    clk_cfg.PeriphClockSelection = RCC_PERIPHCLK_USART1;
-    clk_cfg.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
-    if (HAL_RCCEx_PeriphCLKConfig(&clk_cfg) != HAL_OK)
-    {
-      return false;
-    }
-
-    __HAL_RCC_USART1_CLK_ENABLE();
-    __HAL_RCC_GPIOE_CLK_ENABLE();
-    __HAL_RCC_GPDMA1_CLK_ENABLE();
-
-    /**
-      USART1 GPIO Configuration
-
-      [GPIO Pin] ------> [Signal Name]
-
-        PE5     ------>   USART1_TX
-        PE6     ------>   USART1_RX
-      **/
-    gpio_cfg.Pin       = GPIO_PIN_5 | GPIO_PIN_6;
-    gpio_cfg.Mode      = GPIO_MODE_AF_PP;
-    gpio_cfg.Pull      = GPIO_NOPULL;
-    gpio_cfg.Speed     = GPIO_SPEED_FREQ_LOW;
-    gpio_cfg.Alternate = GPIO_AF7_USART1;
-    HAL_GPIO_Init(GPIOE, &gpio_cfg);
-
-    // FSBL 은 secure 로 돈다. 핀도 secure 로 둬서 secure 인 USART1 과 이어준다.
-    //
-    HAL_GPIO_ConfigPinAttributes(GPIOE, GPIO_PIN_5 | GPIO_PIN_6, GPIO_PIN_SEC | GPIO_PIN_NPRIV);
-
-
-    /* RX DMA : GPDMA1 CH0, linked-list circular
-
-       노드 하나가 자기 자신을 가리키는 원형 큐다. 한 바퀴(UART_RX_BUF_LENGTH)가 끝나면
-       DMA 가 노드를 다시 읽어 처음부터 이어 받는다. */
-    p_hdma->Instance                         = GPDMA1_Channel0;
-    p_hdma->InitLinkedList.Priority          = DMA_LOW_PRIORITY_LOW_WEIGHT;
-    p_hdma->InitLinkedList.LinkStepMode      = DMA_LSM_FULL_EXECUTION;
-    p_hdma->InitLinkedList.LinkAllocatedPort = DMA_LINK_ALLOCATED_PORT0;
-    p_hdma->InitLinkedList.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-    p_hdma->InitLinkedList.LinkedListMode    = DMA_LINKEDLIST_CIRCULAR;
-    if (HAL_DMAEx_List_Init(p_hdma) != HAL_OK)
-    {
-      return false;
-    }
-
-    node_cfg.NodeType                         = DMA_GPDMA_LINEAR_NODE;
-    node_cfg.Init.Request                     = GPDMA1_REQUEST_USART1_RX;
-    node_cfg.Init.BlkHWRequest                = DMA_BREQ_SINGLE_BURST;
-    node_cfg.Init.Direction                   = DMA_PERIPH_TO_MEMORY;
-    node_cfg.Init.SrcInc                      = DMA_SINC_FIXED;
-    node_cfg.Init.DestInc                     = DMA_DINC_INCREMENTED;
-    node_cfg.Init.SrcDataWidth                = DMA_SRC_DATAWIDTH_BYTE;
-    node_cfg.Init.DestDataWidth               = DMA_DEST_DATAWIDTH_BYTE;
-    node_cfg.Init.SrcBurstLength              = 1;
-    node_cfg.Init.DestBurstLength             = 1;
-    node_cfg.Init.TransferAllocatedPort       = DMA_SRC_ALLOCATED_PORT1 | DMA_DEST_ALLOCATED_PORT0;
-    node_cfg.Init.TransferEventMode           = DMA_TCEM_BLOCK_TRANSFER;
-    node_cfg.Init.Mode                        = DMA_NORMAL;
-    node_cfg.TriggerConfig.TriggerPolarity    = DMA_TRIG_POLARITY_MASKED;
-    node_cfg.DataHandlingConfig.DataExchange  = DMA_EXCHANGE_NONE;
-    node_cfg.DataHandlingConfig.DataAlignment = DMA_DATA_RIGHTALIGN_ZEROPADDED;
-    node_cfg.SrcSecure                        = DMA_CHANNEL_SRC_SEC;
-    node_cfg.DestSecure                       = DMA_CHANNEL_DEST_SEC;
-    if (HAL_DMAEx_List_BuildNode(&node_cfg, &dma_node_usart1_rx) != HAL_OK)
-    {
-      return false;
-    }
-    if (HAL_DMAEx_List_InsertNode_Tail(&dma_queue_usart1_rx, &dma_node_usart1_rx) != HAL_OK)
-    {
-      return false;
-    }
-    if (HAL_DMAEx_List_SetCircularMode(&dma_queue_usart1_rx) != HAL_OK)
-    {
-      return false;
-    }
-    if (HAL_DMAEx_List_LinkQ(p_hdma, &dma_queue_usart1_rx) != HAL_OK)
-    {
-      return false;
-    }
-
-    // 버퍼(0x3418_xxxx)와 USART1 이 모두 secure 주소라 채널도 secure 로 둔다.
-    // non-secure 채널은 secure 주소에 접근할 수 없다.
-    //
-    if (HAL_DMA_ConfigChannelAttributes(p_hdma, DMA_CHANNEL_SEC | DMA_CHANNEL_PRIV |
-                                                DMA_CHANNEL_SRC_SEC | DMA_CHANNEL_DEST_SEC) != HAL_OK)
-    {
-      return false;
-    }
-
-    return true;
-  }
-
-  return false;
-}
-
-/* DMA 가 다음에 쓸 위치.
-   남은 카운트(BNDT)로 구한다. 한 바퀴 끝에서 노드를 다시 읽기 직전에는 BNDT 가 0 이라
-   len 이 나오므로 len 으로 나눈 나머지를 쓴다. */
-static uint32_t uartGetRxIndex(uint8_t ch)
-{
-  uint32_t len = uart_tbl[ch].qbuffer.len;
-
-  return (len - __HAL_DMA_GET_COUNTER(uart_tbl[ch].p_huart->hdmarx)) % len;
-}
-
 uint32_t uartAvailable(uint8_t ch)
 {
   uint32_t ret = 0;
@@ -459,6 +341,124 @@ uint32_t uartGetTxCnt(uint8_t ch)
   if (ch >= UART_MAX_CH) return 0;
 
   return uart_tbl[ch].tx_cnt;
+}
+
+bool uartInitHw(uint8_t ch)
+{
+  if (ch == _DEF_UART1)
+  {
+    RCC_PeriphCLKInitTypeDef clk_cfg  = {0};
+    GPIO_InitTypeDef         gpio_cfg = {0};
+    DMA_NodeConfTypeDef      node_cfg = {0};
+    DMA_HandleTypeDef       *p_hdma   = uart_hw_tbl[ch].p_hdma_rx;
+
+
+    // 커널 클럭 : PCLK2 (200 MHz, bspClockInit 참고)
+    //
+    clk_cfg.PeriphClockSelection = RCC_PERIPHCLK_USART1;
+    clk_cfg.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
+    if (HAL_RCCEx_PeriphCLKConfig(&clk_cfg) != HAL_OK)
+    {
+      return false;
+    }
+
+    __HAL_RCC_USART1_CLK_ENABLE();
+    __HAL_RCC_GPIOE_CLK_ENABLE();
+    __HAL_RCC_GPDMA1_CLK_ENABLE();
+
+    /**
+      USART1 GPIO Configuration
+
+      [GPIO Pin] ------> [Signal Name]
+
+        PE5     ------>   USART1_TX
+        PE6     ------>   USART1_RX
+      **/
+    gpio_cfg.Pin       = GPIO_PIN_5 | GPIO_PIN_6;
+    gpio_cfg.Mode      = GPIO_MODE_AF_PP;
+    gpio_cfg.Pull      = GPIO_NOPULL;
+    gpio_cfg.Speed     = GPIO_SPEED_FREQ_LOW;
+    gpio_cfg.Alternate = GPIO_AF7_USART1;
+    HAL_GPIO_Init(GPIOE, &gpio_cfg);
+
+    // FSBL 은 secure 로 돈다. 핀도 secure 로 둬서 secure 인 USART1 과 이어준다.
+    //
+    HAL_GPIO_ConfigPinAttributes(GPIOE, GPIO_PIN_5 | GPIO_PIN_6, GPIO_PIN_SEC | GPIO_PIN_NPRIV);
+
+
+    /* RX DMA : GPDMA1 CH0, linked-list circular
+
+       노드 하나가 자기 자신을 가리키는 원형 큐다. 한 바퀴(UART_RX_BUF_LENGTH)가 끝나면
+       DMA 가 노드를 다시 읽어 처음부터 이어 받는다. */
+    p_hdma->Instance                         = GPDMA1_Channel0;
+    p_hdma->InitLinkedList.Priority          = DMA_LOW_PRIORITY_LOW_WEIGHT;
+    p_hdma->InitLinkedList.LinkStepMode      = DMA_LSM_FULL_EXECUTION;
+    p_hdma->InitLinkedList.LinkAllocatedPort = DMA_LINK_ALLOCATED_PORT0;
+    p_hdma->InitLinkedList.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+    p_hdma->InitLinkedList.LinkedListMode    = DMA_LINKEDLIST_CIRCULAR;
+    if (HAL_DMAEx_List_Init(p_hdma) != HAL_OK)
+    {
+      return false;
+    }
+
+    node_cfg.NodeType                         = DMA_GPDMA_LINEAR_NODE;
+    node_cfg.Init.Request                     = GPDMA1_REQUEST_USART1_RX;
+    node_cfg.Init.BlkHWRequest                = DMA_BREQ_SINGLE_BURST;
+    node_cfg.Init.Direction                   = DMA_PERIPH_TO_MEMORY;
+    node_cfg.Init.SrcInc                      = DMA_SINC_FIXED;
+    node_cfg.Init.DestInc                     = DMA_DINC_INCREMENTED;
+    node_cfg.Init.SrcDataWidth                = DMA_SRC_DATAWIDTH_BYTE;
+    node_cfg.Init.DestDataWidth               = DMA_DEST_DATAWIDTH_BYTE;
+    node_cfg.Init.SrcBurstLength              = 1;
+    node_cfg.Init.DestBurstLength             = 1;
+    node_cfg.Init.TransferAllocatedPort       = DMA_SRC_ALLOCATED_PORT1 | DMA_DEST_ALLOCATED_PORT0;
+    node_cfg.Init.TransferEventMode           = DMA_TCEM_BLOCK_TRANSFER;
+    node_cfg.Init.Mode                        = DMA_NORMAL;
+    node_cfg.TriggerConfig.TriggerPolarity    = DMA_TRIG_POLARITY_MASKED;
+    node_cfg.DataHandlingConfig.DataExchange  = DMA_EXCHANGE_NONE;
+    node_cfg.DataHandlingConfig.DataAlignment = DMA_DATA_RIGHTALIGN_ZEROPADDED;
+    node_cfg.SrcSecure                        = DMA_CHANNEL_SRC_SEC;
+    node_cfg.DestSecure                       = DMA_CHANNEL_DEST_SEC;
+    if (HAL_DMAEx_List_BuildNode(&node_cfg, &dma_node_usart1_rx) != HAL_OK)
+    {
+      return false;
+    }
+    if (HAL_DMAEx_List_InsertNode_Tail(&dma_queue_usart1_rx, &dma_node_usart1_rx) != HAL_OK)
+    {
+      return false;
+    }
+    if (HAL_DMAEx_List_SetCircularMode(&dma_queue_usart1_rx) != HAL_OK)
+    {
+      return false;
+    }
+    if (HAL_DMAEx_List_LinkQ(p_hdma, &dma_queue_usart1_rx) != HAL_OK)
+    {
+      return false;
+    }
+
+    // 버퍼(0x3418_xxxx)와 USART1 이 모두 secure 주소라 채널도 secure 로 둔다.
+    // non-secure 채널은 secure 주소에 접근할 수 없다.
+    //
+    if (HAL_DMA_ConfigChannelAttributes(p_hdma, DMA_CHANNEL_SEC | DMA_CHANNEL_PRIV |
+                                                DMA_CHANNEL_SRC_SEC | DMA_CHANNEL_DEST_SEC) != HAL_OK)
+    {
+      return false;
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
+/* DMA 가 다음에 쓸 위치.
+   남은 카운트(BNDT)로 구한다. 한 바퀴 끝에서 노드를 다시 읽기 직전에는 BNDT 가 0 이라
+   len 이 나오므로 len 으로 나눈 나머지를 쓴다. */
+static uint32_t uartGetRxIndex(uint8_t ch)
+{
+  uint32_t len = uart_tbl[ch].qbuffer.len;
+
+  return (len - __HAL_DMA_GET_COUNTER(uart_tbl[ch].p_huart->hdmarx)) % len;
 }
 
 #if CLI_USE(HW_UART)
