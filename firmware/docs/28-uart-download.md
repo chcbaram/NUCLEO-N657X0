@@ -10,8 +10,8 @@
 ## 1. 쓰는 법
 
 ```bash
-cd firmware/stm32n6-fw
-cmake --build build -j20          # build/stm32n6-fw-trusted.bin (서명본)
+cd firmware/stm32n6-boot
+cmake --build build -j20          # build/stm32n6-boot-trusted.bin (서명본)
 python3 tools/download.py         # FSBL 업데이트 후 리셋 (VSCode 태스크 download-uart, 포트 자동)
                                   # 포트를 고르려면 태스크 "download-uart (포트 선택)" — Firmware Task Manager 확장
 
@@ -21,7 +21,7 @@ python3 tools/download.py res.bin --target data --offset 0x3000  # 데이터 (4 
 
 | 인자 | 기본 | |
 |---|---|---|
-| `bin` | boot: `build/stm32n6-fw-trusted.bin` | |
+| `bin` | boot: `build/stm32n6-boot-trusted.bin` | |
 | `--target` | `boot` | `boot` / `fw` / `data` |
 | `--offset` | 0 | data 영역 안 오프셋. 4 KB 경계여야 한다 (지우기 단위) |
 | `--port` | ST-LINK VCP 자동 (`auto` 도 같다) | ST VID(0x0483) 는 다른 장치도 쓴다. ST-LINK PID / 이름으로 고른다 |

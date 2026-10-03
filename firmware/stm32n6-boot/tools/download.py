@@ -5,7 +5,7 @@
 
   대상
     boot : FSBL (서명본 -trusted.bin). 보드가 FSBL2 에 쓰고 검증한 뒤 FSBL1 로 복사한다.
-           기본 bin 은 build/stm32n6-fw-trusted.bin, 끝나면 리셋한다 (--no-reset 으로 끈다)
+           기본 bin 은 build/stm32n6-boot-trusted.bin, 끝나면 리셋한다 (--no-reset 으로 끈다)
     fw   : 앱. 앞에 TAG 섹터가 있고, 다 쓴 뒤 보드가 TAG 를 기록한다 (커밋)
     data : 데이터 영역 + --offset (4 KB 단위)
 
@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cmdproto import *   # noqa: E402,F403
 
 PRJ_DIR   = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DEF_BOOT  = os.path.join(PRJ_DIR, "build", "stm32n6-fw-trusted.bin")
+DEF_BOOT  = os.path.join(PRJ_DIR, "build", "stm32n6-boot-trusted.bin")
 BAUD_DEF  = 115200
 CHUNK     = 1016                 # cmd 데이터 최대 1024 B - offset 4 B
 FSBL_MAGIC = b"STM2"
@@ -144,7 +144,7 @@ def download(ch, target, image, offset, args):
 
 def main():
   ap = argparse.ArgumentParser(description="UART 로 FSBL / 앱 / 데이터 내려받기")
-  ap.add_argument("binary", nargs="?", help="보낼 bin (boot 기본: build/stm32n6-fw-trusted.bin)")
+  ap.add_argument("binary", nargs="?", help="보낼 bin (boot 기본: build/stm32n6-boot-trusted.bin)")
   ap.add_argument("--target", choices=["boot", "fw", "data"], default="boot")
   ap.add_argument("--offset", type=lambda s: int(s, 0), default=0, help="data 영역 안 오프셋 (4 KB 단위)")
   ap.add_argument("--port", help="시리얼 포트. 없거나 auto 면 ST-LINK VCP 자동")

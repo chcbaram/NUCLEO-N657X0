@@ -85,7 +85,7 @@ void HAL_Delay(uint32_t Delay)
 }
 
 /*
-  펌웨어(stm32n6-fw)의 클럭과 PLL1 은 같게 두고 CPU 만 낮춘다.
+  FSBL(stm32n6-boot)의 클럭과 PLL1 은 같게 두고 CPU 만 낮춘다.
 
     HSI 64 MHz -> PLL1 : M=4 -> N=100 -> 1600 MHz
       IC1 /4 -> CPUCLK 400 MHz   (overdrive 없이 VOS 기본값으로 가능)

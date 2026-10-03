@@ -13,7 +13,7 @@ FSBL 을 서명해서 외부 NOR(0x70000000) 에 쓰고 리셋한다. (macOS / L
   표준 라이브러리만 쓴다.
 
   사용 : python3 tools/flash.py [--bin <bin>] [--loader <stldr>] [--addr <주소>] [--no-reset]
-         인자가 없으면 이 프로젝트(build/stm32n6-fw-trusted.bin) 와 이 저장소의 외부 로더를 쓴다.
+         인자가 없으면 이 프로젝트(build/stm32n6-boot-trusted.bin) 와 이 저장소의 외부 로더를 쓴다.
 """
 import argparse
 import glob
@@ -25,7 +25,7 @@ import sys
 IS_WIN   = os.name == "nt"
 EXE      = ".exe" if IS_WIN else ""
 PRJ_DIR  = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DEF_BIN  = os.path.join(PRJ_DIR, "build", "stm32n6-fw-trusted.bin")
+DEF_BIN  = os.path.join(PRJ_DIR, "build", "stm32n6-boot-trusted.bin")
 LDR_DIR  = os.path.abspath(os.path.join(PRJ_DIR, "..", "stm32n6-ext-loader"))
 DEF_LDR  = os.path.join(LDR_DIR, "build", "MX25UM51245G_NUCLEO-N657X0.stldr")
 ANSI     = re.compile(r"\x1b\[[0-9;]*m")

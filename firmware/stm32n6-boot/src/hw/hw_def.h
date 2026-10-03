@@ -6,7 +6,7 @@
 
 
 #define _DEF_FIRMWATRE_VERSION    "V260826R1"
-#define _DEF_BOARD_NAME           "STM32N6-FW"
+#define _DEF_BOARD_NAME           "STM32N6-BOOT"
 
 #define _USE_HW_BOOTROM
 #define _USE_HW_OTP

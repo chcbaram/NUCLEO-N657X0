@@ -45,7 +45,7 @@ fi
 echo "CubeCLT : $CLT"
 
 PRJ_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-ELF="$PRJ_DIR/build/stm32n6-fw.elf"
+ELF="$PRJ_DIR/build/stm32n6-boot.elf"
 GDB_PORT=${GDB_PORT:-61234}
 
 [ -f "$ELF" ] || { echo "elf 가 없다: $ELF  (먼저 빌드할 것)"; exit 1; }

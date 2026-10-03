@@ -1,6 +1,6 @@
-# 11. stm32n6-fw 프로젝트 골격
+# 11. stm32n6-boot 프로젝트 골격
 
-> `firmware/stm32n6-fw` — NUCLEO-N657X0-Q 용 FSBL 프로젝트
+> `firmware/stm32n6-boot` — NUCLEO-N657X0-Q 용 FSBL 프로젝트
 > 참조: `NUCLEO-C5A3ZG/firmware/stm32c5-ai` 의 레이어 구조를 그대로 따른다.
 
 ---
@@ -18,7 +18,7 @@ STM32N6 에는 내장 유저 플래시가 없다. BootROM 은 이미지를 AXISR
 ## 2. 디렉터리 구조
 
 ```
-firmware/stm32n6-fw/
+firmware/stm32n6-boot/
 ├── CMakeLists.txt
 ├── .clang-format                 참조 프로젝트에서 그대로
 ├── .gitignore
@@ -99,11 +99,11 @@ MEMORY
 `0x34180000` 이 헤더(0x400), `0x34180400` 부터가 코드다. 빌드 결과 확인:
 
 ```
-$ arm-none-eabi-objdump -h build/stm32n6-fw.elf
+$ arm-none-eabi-objdump -h build/stm32n6-boot.elf
   0 .isr_vector   0000034c  34180400  34180400
   1 .text         00002cb8  34180750  34180750
 
-$ arm-none-eabi-objdump -s -j .isr_vector build/stm32n6-fw.elf
+$ arm-none-eabi-objdump -s -j .isr_vector build/stm32n6-boot.elf
  34180400 00002034 21111834 ...
           MSP=0x34200000  Reset=0x34181121
 ```
@@ -179,7 +179,7 @@ C5(M33) 프로젝트에서 바뀐 부분은 [10-dev-environment.md](10-dev-envir
 ## 6. 빌드 / 적재
 
 ```bash
-cd firmware/stm32n6-fw
+cd firmware/stm32n6-boot
 
 # 빌드
 cmake -S . -B build && cmake --build build -j20
@@ -195,7 +195,7 @@ VSCode 에서는 `build-build`(기본 빌드) / `load-sram` 태스크, `Debug FS
 `STM32_Programmer_CLI` 로도 적재 자체는 되지만,
 
 ```bash
-STM32_Programmer_CLI -c port=SWD ap=1 mode=Hotplug -w build/stm32n6-fw.elf -s 0x34180400
+STM32_Programmer_CLI -c port=SWD ap=1 mode=Hotplug -w build/stm32n6-boot.elf -s 0x34180400
 ```
 
 **`-c` 로 연결할 때마다 software reset 이 걸린다.** 그러면 BootROM 으로 되돌아가서

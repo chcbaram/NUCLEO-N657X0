@@ -8,7 +8,7 @@
       "problemMatcher": []
     },
     {
-      // -j20 고정 (stm32n6-fw 와 같은 이유)
+      // -j20 고정 (stm32n6-boot 와 같은 이유)
       "label": "build-build",
       "type": "shell",
       "command": "cmake --build build -j20",

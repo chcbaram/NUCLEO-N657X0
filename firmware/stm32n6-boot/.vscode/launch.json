@@ -4,7 +4,7 @@
     {
       "name": "Debug FSBL (SRAM)",
       "cwd": "${workspaceRoot}",
-      "executable": "./build/stm32n6-fw.elf",
+      "executable": "./build/stm32n6-boot.elf",
       "request": "launch",
       "type": "cortex-debug",
       "servertype": "stlink",
@@ -37,7 +37,7 @@
       //   executable 은 심볼용이다. 플래시에 쓴 것과 같은 ELF 여야 한다 (다르면 gdb 가 엉뚱한 주소를 읽다 보드가 멈출 수 있다).
       "name": "Flash + Attach FSBL",
       "cwd": "${workspaceRoot}",
-      "executable": "./build/stm32n6-fw.elf",
+      "executable": "./build/stm32n6-boot.elf",
       "request": "attach",
       "type": "cortex-debug",
       "servertype": "stlink",
@@ -54,7 +54,7 @@
       // 돌고 있는 FSBL 에 리셋 없이 붙기만 한다 (쓰기 없음).
       "name": "Attach FSBL",
       "cwd": "${workspaceRoot}",
-      "executable": "./build/stm32n6-fw.elf",
+      "executable": "./build/stm32n6-boot.elf",
       "request": "attach",
       "type": "cortex-debug",
       "servertype": "stlink",

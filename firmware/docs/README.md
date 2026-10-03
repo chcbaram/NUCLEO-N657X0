@@ -8,7 +8,7 @@ STM32N657X0H3Q / MB1940-C02 보드 기준 펌웨어 개발 참고 문서.
 |---|---|
 | 보드 | NUCLEO-N657X0-Q (MB1940-C02), Device ID `0x486` Rev B |
 | **부트 점퍼** | **JP2(BOOT1) = 1 → Development boot.** 이 상태여야 SWD 가 붙는다 |
-| 펌웨어 | `firmware/stm32n6-fw` — FSBL 골격 + LED + **UART(VCP, DMA 수신) + 로그 + CLI + BootROM 트레이스 + 외부 NOR(XSPI2) + RTC/리셋 + Flash boot(외부 로더) + UART 다운로드** 동작 확인 |
+| 펌웨어 | `firmware/stm32n6-boot` — FSBL 골격 + LED + **UART(VCP, DMA 수신) + 로그 + CLI + BootROM 트레이스 + 외부 NOR(XSPI2) + RTC/리셋 + Flash boot(외부 로더) + UART 다운로드** 동작 확인 |
 | 클럭 | **800 MHz overdrive** (HSI → PLL1 1600 MHz → IC1 /2, V<sub>DDCORE</sub> 0.89 V) → [22](22-cpu-800mhz.md) |
 | 빌드 | 88,720 B / 511 KB (16.96%) — arm-none-eabi-gcc 15.3.1 |
 | 툴 | CubeCLT 1.22.0 에서 필요한 것만 `~/ST` 에 추출 (Programmer 2.23.0 / gdbserver 7.14.0). 적재·SWD 확인 완료 |
@@ -16,7 +16,7 @@ STM32N657X0H3Q / MB1940-C02 보드 기준 펌웨어 개발 참고 문서.
 ### 바로 다시 시작하기
 
 ```bash
-cd firmware/stm32n6-fw
+cd firmware/stm32n6-boot
 cmake -S . -B build && cmake --build build -j20
 ./tools/load.sh                       # SRAM 적재 후 실행 (LD7 500ms 점멸 + VCP 115200 부팅 배너 + cli#)
 ```
@@ -69,7 +69,7 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 | 문서 | 내용 | 상태 |
 |---|---|---|
 | [10-dev-environment.md](10-dev-environment.md) | 툴체인 점검, CubeCLT 설치/경로 규칙, 보드 연결 확인 | ✅ |
-| [11-project-skeleton.md](11-project-skeleton.md) | `stm32n6-fw` 디렉터리/CMake 구조, 링커·스타트업, 빌드·적재 방법 | ✅ |
+| [11-project-skeleton.md](11-project-skeleton.md) | `stm32n6-boot` 디렉터리/CMake 구조, 링커·스타트업, 빌드·적재 방법 | ✅ |
 
 ### 구현 기록
 

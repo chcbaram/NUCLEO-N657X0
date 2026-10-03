@@ -157,10 +157,10 @@ Memory region     Used Size  Region Size  %age Used
 ```
 
 ```
-$ arm-none-eabi-objdump -h build/stm32n6-fw.elf
+$ arm-none-eabi-objdump -h build/stm32n6-boot.elf
   0 .isr_vector   0000034c  34180400  34180400     <- 헤더 뒤 정확한 위치
   1 .text         00002cb8  34180750  34180750
-$ arm-none-eabi-readelf -h build/stm32n6-fw.elf | grep Entry
+$ arm-none-eabi-readelf -h build/stm32n6-boot.elf | grep Entry
   Entry point address:  0x34181121
 ```
 

@@ -22,7 +22,7 @@ set(EXECUTABLE ${PRJ_NAME}.stldr)
 #   HAL / CMSIS 와 xspi 드라이버를 복사하지 않고 그대로 가져와서
 #   펌웨어에서 고친 것이 로더에도 바로 반영되게 한다.
 #
-set(FW_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../stm32n6-fw)
+set(FW_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../stm32n6-boot)
 
 
 file(GLOB_RECURSE SRC_FILES_RECURSE CONFIGURE_DEPENDS

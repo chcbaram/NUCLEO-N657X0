@@ -10,16 +10,16 @@
 ## 1. 빌드 → 기록 → 디버그
 
 ```bash
-cd firmware/stm32n6-fw
-cmake --build build -j20  # build/stm32n6-fw.bin 과 서명본 build/stm32n6-fw-trusted.bin (post-build)
+cd firmware/stm32n6-boot
+cmake --build build -j20  # build/stm32n6-boot.bin 과 서명본 build/stm32n6-boot-trusted.bin (post-build)
 python3 tools/flash.py    # 외부 로더로 기록·검증 → 리셋 (VSCode 태스크 flash-ext)
                           # Windows 는 python tools/flash.py. 표준 라이브러리만 쓴다
 ```
 
 | 단계 | 어디서 | 명령 |
 |---|---|---|
-| 서명 | **빌드 post-build** (`CMakeLists.txt`) | `STM32_SigningTool_CLI -bin stm32n6-fw.bin -nk -of 0x80000000 -t fsbl -hv 2.3 -align -s -o stm32n6-fw-trusted.bin` |
-| 기록 | `tools/flash.py` | `STM32_Programmer_CLI -c port=SWD ap=1 mode=Hotplug -halt -coreReg PRIMASK=1 -w32 … -el <로더>.stldr -w stm32n6-fw-trusted.bin 0x70000000 -v -hardRst` |
+| 서명 | **빌드 post-build** (`CMakeLists.txt`) | `STM32_SigningTool_CLI -bin stm32n6-boot.bin -nk -of 0x80000000 -t fsbl -hv 2.3 -align -s -o stm32n6-boot-trusted.bin` |
+| 기록 | `tools/flash.py` | `STM32_Programmer_CLI -c port=SWD ap=1 mode=Hotplug -halt -coreReg PRIMASK=1 -w32 … -el <로더>.stldr -w stm32n6-boot-trusted.bin 0x70000000 -v -hardRst` |
 | 디버그 | VSCode **Flash + Attach FSBL** | `flash-ext` 태스크 → 다시 뜬 FSBL 에 `--attach` 로 붙는다 (쓰기 없음). 쓰지 않고 붙기만 하려면 **Attach FSBL** |
 
 - `-nk` 키 없음. secure_boot 퓨즈를 태우지 않은 보드에서만 뜬다 ([01](01-boot-process.md))
@@ -34,7 +34,7 @@ python3 tools/flash.py    # 외부 로더로 기록·검증 → 리셋 (VSCode �
 
 | 인자 | 기본 | |
 |---|---|---|
-| `--bin` | `build/stm32n6-fw-trusted.bin` | 헤더(`STM2`)가 없으면 키 없이 서명해서 `<이름>-trusted.bin` 을 만든 뒤 쓴다 |
+| `--bin` | `build/stm32n6-boot-trusted.bin` | 헤더(`STM2`)가 없으면 키 없이 서명해서 `<이름>-trusted.bin` 을 만든 뒤 쓴다 |
 | `--loader` | `../stm32n6-ext-loader/build/MX25UM51245G_NUCLEO-N657X0.stldr` | 기본 로더가 없으면 빌드한다 |
 | `--addr` | `0x70000000` | FSBL1 자리 (FSBL2 는 `0x70040000`) |
 | `--no-reset` | — | 기록 뒤 리셋하지 않는다 |
@@ -60,7 +60,7 @@ python3 tools/flash.py    # 외부 로더로 기록·검증 → 리셋 (VSCode �
 | `src/bsp/bsp.c` | 클럭(CPU 400 MHz, overdrive 없음), DWT 로 만든 `HAL_GetTick` |
 | `src/bsp/ldscript/stm32n6_ext_loader.ld` | Loader / SgInfo 두 세그먼트 |
 
-**펌웨어 코드를 그대로 쓴다.** HAL / CMSIS, `xspi.c`, `led.c` 는 복사하지 않고 `../stm32n6-fw` 에서 빌드한다.
+**펌웨어 코드를 그대로 쓴다.** HAL / CMSIS, `xspi.c`, `led.c` 는 복사하지 않고 `../stm32n6-boot` 에서 빌드한다.
 펌웨어 드라이버를 고치면 로더에도 바로 들어간다. 로그·CLI 가 없는 빌드를 위해 `log.h` 에 빈 `logPrintf` 를 두었다.
 
 ### CubeProgrammer 와의 약속
