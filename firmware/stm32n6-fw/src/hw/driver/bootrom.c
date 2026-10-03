@@ -289,6 +289,9 @@ void cliCmd(cli_args_t *args)
 
     bootromSummary(buf, sizeof(buf));
     cliPrintf("%s\n", buf);
+    cliPrintf("BSEC DBGCR 0x%08X, AP_UNLOCK 0x%02X, HDPL 0x%02X, SR 0x%08X\n",
+              (unsigned int)BSEC->DBGCR, (unsigned int)BSEC->AP_UNLOCK,
+              (unsigned int)BSEC->HDPLSR, (unsigned int)BSEC->SR);
     ret = true;
   }
 

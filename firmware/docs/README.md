@@ -8,7 +8,7 @@ STM32N657X0H3Q / MB1940-C02 보드 기준 펌웨어 개발 참고 문서.
 |---|---|
 | 보드 | NUCLEO-N657X0-Q (MB1940-C02), Device ID `0x486` Rev B |
 | **부트 점퍼** | **JP2(BOOT1) = 1 → Development boot.** 이 상태여야 SWD 가 붙는다 |
-| 펌웨어 | `firmware/stm32n6-fw` — FSBL 골격 + LED + **UART(VCP, DMA 수신) + 로그 + CLI + BootROM 트레이스 + 외부 NOR(XSPI2) + RTC/리셋** 동작 확인 |
+| 펌웨어 | `firmware/stm32n6-fw` — FSBL 골격 + LED + **UART(VCP, DMA 수신) + 로그 + CLI + BootROM 트레이스 + 외부 NOR(XSPI2) + RTC/리셋 + Flash boot(외부 로더)** 동작 확인 |
 | 클럭 | **800 MHz overdrive** (HSI → PLL1 1600 MHz → IC1 /2, V<sub>DDCORE</sub> 0.89 V) → [22](22-cpu-800mhz.md) |
 | 빌드 | 88,720 B / 511 KB (16.96%) — arm-none-eabi-gcc 15.3.1 |
 | 툴 | CubeCLT 1.22.0 에서 필요한 것만 `~/ST` 에 추출 (Programmer 2.23.0 / gdbserver 7.14.0). 적재·SWD 확인 완료 |
@@ -41,10 +41,9 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 
 ### 다음 작업
 
-1. 서명 → 플래시 기록 → Flash boot 전환 (BOOT0=0, BOOT1=0)
-   - Flash boot 에서는 BootROM 이 디버그 포트를 닫는다. `bspDebugOpen()` 이 이미 다시 연다
-2. FSBL / Application 분리 (LRUN 또는 XIP)
-3. (보류) SWD attach 시 멈춤의 방아쇠 규명 — launch 방식으로 피했다 → [21](21-uart-cli.md) 10절
+1. SWD attach 시 멈춤의 원인 규명 — Flash boot 에서는 attach 밖에 없어서 디버거로 쓸 수 없다 → [26](26-flash-boot.md) 5절, [21](21-uart-cli.md) 10절
+2. UART CLI 로 플래시 쓰기 (디버거 없이 펌웨어 교체)
+3. FSBL / Application 분리 (LRUN 또는 XIP)
 
 ## 문서 번호 규칙
 
@@ -84,7 +83,7 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 | [23-bootrom-trace.md](23-bootrom-trace.md) | BootROM 트레이스 파서 (직접 작성, 라이선스 이유) | ✅ |
 | [24-xspi-nor.md](24-xspi-nor.md) | 외부 NOR (XSPI2) OPI DTR 50 MHz, XIP ~100 MB/s, HSLV 퓨즈 안 태움 | ✅ |
 | [25-rtc-reset.md](25-rtc-reset.md) | RTC(LSE, 백업 레지스터) + 리셋 원인 / 재부팅 CLI | ✅ |
-| `26-flash-boot.md` | 서명 → 외부 NOR 기록 → Flash boot 전환 | 예정 |
+| [26-flash-boot.md](26-flash-boot.md) | 서명 → 외부 로더로 NOR 기록 → Flash boot. 디버거 attach 문제 남음 | ✅ |
 | `27-app-split.md` | FSBL / Application 분리 (LRUN 또는 XIP) | 예정 |
 
 ## 그림

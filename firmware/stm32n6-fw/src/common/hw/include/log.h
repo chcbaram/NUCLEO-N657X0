@@ -24,6 +24,11 @@ bool logIsOpen(void);
 void logBoot(uint8_t enable);
 void logPrintf(const char *fmt, ...);
 
+#else
+
+// 로그가 없는 빌드(ext-loader)에서도 드라이버를 그대로 쓰게 한다
+#define logPrintf(...)
+
 #endif
 
 #ifdef __cplusplus
