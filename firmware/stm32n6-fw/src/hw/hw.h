@@ -12,6 +12,7 @@ extern "C" {
 #include "log.h"
 #include "cli.h"
 #include "bootrom.h"
+#include "otp.h"
 
 
 bool hwInit(void);

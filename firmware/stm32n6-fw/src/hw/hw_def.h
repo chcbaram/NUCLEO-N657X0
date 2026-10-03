@@ -8,6 +8,9 @@
 #define _DEF_FIRMWATRE_VERSION    "V260826R1"
 #define _DEF_BOARD_NAME           "STM32N6-FW"
 
+#define _USE_HW_BOOTROM
+#define _USE_HW_OTP
+
 
 #define _USE_HW_LED
 #define      HW_LED_MAX_CH          3
@@ -30,7 +33,6 @@
 #define      HW_LOG_BOOT_BUF_MAX    2048
 #define      HW_LOG_LIST_BUF_MAX    4096
 
-#define _USE_HW_BOOTROM
 
 
 //-- CLI
@@ -38,6 +40,7 @@
 #define _USE_CLI_HW_LOG             1
 #define _USE_CLI_HW_UART            1
 #define _USE_CLI_HW_BOOTROM         1
+#define _USE_CLI_HW_OTP             1
 
 
 #endif
