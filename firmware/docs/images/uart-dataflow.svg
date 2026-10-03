@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="930" viewBox="0 0 1000 930" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR','Apple SD Gothic Neo',sans-serif">
+<defs><marker id="mrx" markerWidth="11" markerHeight="9" refX="10" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L11,4.5 L0,9 z" fill="#2563eb"/></marker><marker id="mtx" markerWidth="11" markerHeight="9" refX="10" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L11,4.5 L0,9 z" fill="#16a34a"/></marker><marker id="mfl" markerWidth="11" markerHeight="9" refX="10" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L11,4.5 L0,9 z" fill="#ea580c"/></marker><marker id="mbd" markerWidth="11" markerHeight="9" refX="10" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L11,4.5 L0,9 z" fill="#7c3aed"/></marker></defs>
+<rect width="1000" height="930" fill="#fbfbfd"/>
+<text x="28" y="40" font-size="20" font-weight="700" fill="#1a1a2e">UART 다운로드 — 레이어별 모듈과 데이터 흐름</text>
+<text x="28" y="64" font-size="13" fill="#4b5563">수신(명령)은 아래에서 위로 올라가 cmd_boot 에서 처리되고, 응답은 위에서 아래로 내려간다. 플래시는 hw 드라이버를 거쳐 NOR 로.</text>
+<rect x="28" y="84" width="944" height="166" rx="6" fill="#ecfdf5" opacity="0.7"/>
+<text x="40" y="165.0" font-size="13.5" font-weight="700" fill="#1a1a2e">ap 모듈</text>
+<text x="40" y="182.0" font-size="10" fill="#6b7280" font-family="ui-monospace,Menlo,monospace">src/ap/modules</text>
+<rect x="28" y="258" width="944" height="92" rx="6" fill="#eff6ff" opacity="0.7"/>
+<text x="40" y="302.0" font-size="13.5" font-weight="700" fill="#1a1a2e">cmd 프로토콜</text>
+<text x="40" y="319.0" font-size="10" fill="#6b7280" font-family="ui-monospace,Menlo,monospace">src/hw/driver</text>
+<rect x="28" y="358" width="944" height="92" rx="6" fill="#ecfdf5" opacity="0.7"/>
+<text x="40" y="402.0" font-size="13.5" font-weight="700" fill="#1a1a2e">채널 어댑터</text>
+<text x="40" y="419.0" font-size="10" fill="#6b7280" font-family="ui-monospace,Menlo,monospace">cmd/driver</text>
+<rect x="28" y="458" width="944" height="182" rx="6" fill="#eff6ff" opacity="0.7"/>
+<text x="40" y="547.0" font-size="13.5" font-weight="700" fill="#1a1a2e">hw 드라이버</text>
+<text x="40" y="564.0" font-size="10" fill="#6b7280" font-family="ui-monospace,Menlo,monospace">src/hw</text>
+<rect x="28" y="648" width="944" height="92" rx="6" fill="#f3f4f6" opacity="0.7"/>
+<text x="40" y="692.0" font-size="13.5" font-weight="700" fill="#1a1a2e">하드웨어</text>
+<text x="40" y="709.0" font-size="10" fill="#6b7280" font-family="ui-monospace,Menlo,monospace">STM32N657</text>
+<rect x="28" y="748" width="944" height="82" rx="6" fill="#f5f3ff" opacity="0.7"/>
+<text x="40" y="787.0" font-size="13.5" font-weight="700" fill="#1a1a2e">외부</text>
+<rect x="150" y="96" width="810" height="66" rx="7" fill="#ffffff" stroke="#6ee7b7" stroke-width="1.5"/>
+<text x="162" y="117" font-size="13.5" font-weight="700" fill="#1a1a2e">cmd_boot.c  cmdBootProcess()</text>
+<text x="162" y="136" font-size="11.8" fill="#374151">INFO · FW_BEGIN · ERASE · WRITE · END · VERIFY · BAUD · RESET</text>
+<text x="162" y="152" font-size="11.8" fill="#374151">대상(boot / fw / data)에 따라 주소·순서를 정한다 — boot 는 FSBL2 → FSBL1</text>
+<rect x="710" y="176" width="170" height="62" rx="7" fill="#ffffff" stroke="#6ee7b7" stroke-width="1.5"/>
+<text x="722" y="197" font-size="13.5" font-weight="700" fill="#1a1a2e">boot.c</text>
+<text x="722" y="216" font-size="11.8" fill="#374151">앱 이미지 판정</text>
+<text x="722" y="232" font-size="11.8" fill="#374151">(TAG / VER)</text>
+<rect x="150" y="176" width="250" height="62" rx="7" fill="#ffffff" stroke="#6ee7b7" stroke-width="1.5"/>
+<text x="162" y="197" font-size="13.5" font-weight="700" fill="#1a1a2e">cmd_task.c  (cmd 모듈)</text>
+<text x="162" y="216" font-size="11.8" fill="#374151">moduleUpdate() 가 계속 부른다</text>
+<text x="162" y="232" font-size="11.8" fill="#374151">패킷이 오면 cmdBootProcess()</text>
+<rect x="150" y="270" width="250" height="68" rx="7" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5"/>
+<text x="162" y="291" font-size="13.5" font-weight="700" fill="#1a1a2e">cmd.c  패킷 파서</text>
+<text x="162" y="310" font-size="11.8" fill="#374151">cmdReceivePacket() · 체크섬 확인</text>
+<text x="162" y="326" font-size="11.8" fill="#374151">바이트 사이 100 ms 넘으면 처음부터</text>
+<rect x="430" y="270" width="250" height="68" rx="7" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5"/>
+<text x="442" y="291" font-size="13.5" font-weight="700" fill="#1a1a2e">cmd.c  응답 · 보율</text>
+<text x="442" y="310" font-size="11.8" fill="#374151">cmdSendResp() → 드라이버 write()</text>
+<text x="442" y="326" font-size="11.8" fill="#374151">cmdSetBaud() → 드라이버 set_baud()</text>
+<rect x="150" y="370" width="250" height="68" rx="7" fill="#ffffff" stroke="#6ee7b7" stroke-width="1.5"/>
+<text x="162" y="391" font-size="13.5" font-weight="700" fill="#1a1a2e">drv_uart.c  RX 필터</text>
+<text x="162" y="410" font-size="11.8" fill="#374151">02 FD 로 시작하면 헤더의 len 만큼</text>
+<text x="162" y="426" font-size="11.8" fill="#374151">cmd 큐(2 KB) 로 가져간다</text>
+<rect x="430" y="370" width="250" height="68" rx="7" fill="#ffffff" stroke="#6ee7b7" stroke-width="1.5"/>
+<text x="442" y="391" font-size="13.5" font-weight="700" fill="#1a1a2e">drv_uart.c  write · 보율</text>
+<text x="442" y="410" font-size="11.8" fill="#374151">write() → uartWrite()</text>
+<text x="442" y="426" font-size="11.8" fill="#374151">set_baud() → uartOpen · 3 초 무응답 시 복귀</text>
+<rect x="150" y="470" width="250" height="76" rx="7" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5"/>
+<text x="162" y="491" font-size="13.5" font-weight="700" fill="#1a1a2e">cli.c  cliMain()</text>
+<text x="162" y="510" font-size="11.8" fill="#374151">바이트마다 RX 필터에 먼저 묻는다</text>
+<text x="162" y="526" font-size="11.8" fill="#0891b2">↳ 그 밖의 바이트는 cliUpdate()</text>
+<text x="162" y="542" font-size="11.8" fill="#374151">   → CLI 명령 (xspi · reset · rtc …)</text>
+<rect x="150" y="558" width="250" height="72" rx="7" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5"/>
+<text x="162" y="579" font-size="13.5" font-weight="700" fill="#1a1a2e">uart.c  수신 큐</text>
+<text x="162" y="598" font-size="11.8" fill="#374151">qbuffer 4 KB (non-cacheable)</text>
+<text x="162" y="614" font-size="11.8" fill="#374151">DMA 카운터로 쓴 위치를 안다</text>
+<rect x="430" y="558" width="250" height="72" rx="7" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5"/>
+<text x="442" y="579" font-size="13.5" font-weight="700" fill="#1a1a2e">uart.c  송신 · 보율</text>
+<text x="442" y="598" font-size="11.8" fill="#374151">uartWrite() · 타임아웃 = 길이·보율</text>
+<text x="442" y="614" font-size="11.8" fill="#374151">uartOpen(ch, baud) → 송수신 모두 다시</text>
+<rect x="710" y="470" width="250" height="64" rx="7" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5"/>
+<text x="722" y="491" font-size="13.5" font-weight="700" fill="#1a1a2e">flash.c</text>
+<text x="722" y="510" font-size="11.8" fill="#374151">0x7000_0000 주소 → xspi 오프셋</text>
+<text x="722" y="526" font-size="11.8" fill="#374151">flashErase / Write / Read</text>
+<rect x="710" y="558" width="250" height="72" rx="7" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5"/>
+<text x="722" y="579" font-size="13.5" font-weight="700" fill="#1a1a2e">xspi.c</text>
+<text x="722" y="598" font-size="11.8" fill="#374151">OPI DTR 50 MHz</text>
+<text x="722" y="614" font-size="11.8" fill="#374151">홀수 주소·길이는 2 바이트로 감싼다</text>
+<rect x="150" y="660" width="250" height="68" rx="7" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="162" y="681" font-size="13.5" font-weight="700" fill="#1a1a2e">USART1 수신</text>
+<text x="162" y="700" font-size="11.8" fill="#374151">PE6 · GPDMA 원형 링크드리스트</text>
+<text x="162" y="716" font-size="11.8" fill="#374151">CPU 개입 없이 버퍼에 쌓는다</text>
+<rect x="430" y="660" width="250" height="68" rx="7" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="442" y="681" font-size="13.5" font-weight="700" fill="#1a1a2e">USART1 송신</text>
+<text x="442" y="700" font-size="11.8" fill="#374151">PE5 · HAL_UART_Transmit</text>
+<text x="442" y="716" font-size="11.8" fill="#374151">전송 완료(TC)까지 기다린다</text>
+<rect x="710" y="660" width="250" height="68" rx="7" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="722" y="681" font-size="13.5" font-weight="700" fill="#1a1a2e">XSPI2 → MX25UM51245G</text>
+<text x="722" y="700" font-size="11.8" fill="#374151">64 MB NOR · FSBL1 0x7000_0000</text>
+<text x="722" y="716" font-size="11.8" fill="#374151">FSBL2 0x7004_0000 · 앱 · 데이터</text>
+<rect x="150" y="760" width="530" height="58" rx="7" fill="#ffffff" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="162" y="781" font-size="13.5" font-weight="700" fill="#1a1a2e">PC  ⇄  ST-LINK V3 VCP</text>
+<text x="162" y="800" font-size="11.8" fill="#374151">tools/download.py · USB ↔ UART · 보율은 PC 가 정한다 (115200 → 4 Mbps)</text>
+<polyline points="245.0,758 245.0,732" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#mrx)"/>
+<polyline points="245.0,658 245.0,634" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#mrx)"/>
+<polyline points="245.0,556 245.0,550" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#mrx)"/>
+<polyline points="245.0,468 245.0,442" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#mrx)"/>
+<polyline points="245.0,368 245.0,342" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#mrx)"/>
+<polyline points="245.0,268 245.0,242" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#mrx)"/>
+<polyline points="245.0,174 245.0,166" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#mrx)"/>
+<text x="253.0" y="458" font-size="11.5" font-weight="700" fill="#2563eb" text-anchor="start">02 FD 패킷</text>
+<polyline points="525.0,164 525.0,266" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#mtx)"/>
+<polyline points="525.0,340 525.0,366" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#mtx)"/>
+<polyline points="525.0,440 525.0,554" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#mtx)"/>
+<polyline points="525.0,632 525.0,656" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#mtx)"/>
+<polyline points="525.0,730 525.0,756" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#mtx)"/>
+<text x="533.0" y="214" font-size="11.5" font-weight="700" fill="#16a34a" text-anchor="start">응답 · BAUD</text>
+<text x="533.0" y="230" font-size="11.5" font-weight="700" fill="#6b7280" text-anchor="start">(BAUD 는 OK 응답 뒤에 바꾼다)</text>
+<polyline points="795,164 795,172" fill="none" stroke="#ea580c" stroke-width="2.2" marker-end="url(#mfl)"/>
+<polyline points="924,164 924,466" fill="none" stroke="#ea580c" stroke-width="2.2" marker-end="url(#mfl)"/>
+<text x="916" y="306" font-size="11.5" font-weight="700" fill="#ea580c" text-anchor="end">지우기·쓰기·읽기</text>
+<polyline points="835.0,534 835.0,554" fill="none" stroke="#ea580c" stroke-width="2.2" marker-end="url(#mfl)"/>
+<polyline points="835.0,630 835.0,656" fill="none" stroke="#ea580c" stroke-width="2.2" marker-end="url(#mfl)"/>
+<line x1="40" y1="862" x2="68" y2="862" stroke="#2563eb" stroke-width="2.5"/>
+<text x="76" y="866" font-size="12" fill="#374151">수신 (명령)</text>
+<line x1="190" y1="862" x2="218" y2="862" stroke="#16a34a" stroke-width="2.5"/>
+<text x="226" y="866" font-size="12" fill="#374151">응답 · 보율</text>
+<line x1="340" y1="862" x2="368" y2="862" stroke="#ea580c" stroke-width="2.5"/>
+<text x="376" y="866" font-size="12" fill="#374151">플래시</text>
+<text x="40" y="892" font-size="11.5" fill="#6b7280">ap.c 는 moduleInit() / moduleUpdate() 만 부른다. cli 모듈이 cliMain() 을, cmd 모듈이 cmdTaskUpdate() 를 돌린다 (MODULE_DEF 로 자기 등록).</text>
+</svg>

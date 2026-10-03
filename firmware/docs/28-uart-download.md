@@ -79,6 +79,8 @@ weact 앱(XIP)처럼 "자기를 못 써서 부트로더에 넘기는" 제약이 
 
 weact-h750 `cmd.c` 를 그대로 가져왔다 (`02 FD type cmd err len data checksum`, 데이터 최대 1024 B).
 
+![cmd 패킷 구성](images/cmd-packet.svg)
+
 | 코드 | 명령 | 요청 → 응답 |
 |---|---|---|
 | 0x0000 | INFO | → `boot_info_t` 104 B (weact 와 같다) + 확장 `cmd_ver, boot2_addr, data_addr, data_size, baud` |
@@ -118,15 +120,21 @@ USB CDC 는 호스트가 연 보율로 주인을 가를 수 있지만 (weact: 11
 
 ### 코드 구조 (다른 프로젝트와 같은 모양)
 
+![UART 다운로드 데이터 흐름](images/uart-dataflow.svg)
+
 | 파일 | |
 |---|---|
 | `src/ap/modules/module.c/h` | 모듈 자기 등록 (`MODULE_DEF` → 링커 `.module` 섹션). titan-mini 판 (const 디스크립터, `update(arg)`, 우선순위 7 단계, `module info`) |
 | `src/ap/modules/common/cli/cli.c` | cli 모듈 (`cliOpen` / `cliMain`) |
 | `src/ap/modules/cmd/cmd_task.c/h` | cmd 모듈. `static cmd_t` / `cmd_driver_t` 배열을 갖고 드라이버를 채운다. 헤더에는 `cmdTaskInit/Update` 만 |
-| `src/ap/modules/cmd/driver/drv_uart.c/h` | `drvUartInit(cmd_driver_t *p_driver, ch, baud)` 가 함수 포인터를 채우고 ch/baud 를 `p_driver->args` 에 둔다 (stm32h7-lvgl 과 같다). 전역 extern 없음 |
+| `src/ap/modules/cmd/driver/drv_uart.c/h` | `drvUartInit(cmd_driver_t *p_driver, ch, baud)` 가 함수 포인터를 채우고 ch/baud 를 `p_driver->args` 에 둔다 (stm32h7-lvgl 과 같다). 전역 extern 없음. 3 초 무응답 복귀(`drvUartUpdate`)도 여기 |
 | `src/ap/modules/cmd/process/cmd_boot.c/h` | 명령 처리 |
 | `src/ap/modules/boot/boot.c/h` | 앱 이미지 판정 (TAG / VER) |
-| `src/hw/driver/cmd.c`, `flash.c` | 패킷 파서 (weact 그대로), 주소 기반 플래시 접근 |
+| `src/hw/driver/cmd.c`, `flash.c` | 패킷 파서 (weact 그대로) + `cmdSetBaud/GetBaud`, 주소 기반 플래시 접근 |
+
+**보율도 드라이버 함수 포인터로 넘긴다.** `cmd_driver_t` 에 선택 항목 `set_baud` / `get_baud` 를 더했다 (보율이 없는 채널은 NULL).
+명령 처리(`cmd_boot.c`)는 `cmdSetBaud(p_cmd, baud)` 만 부르고 채널 종류를 모른다 — 처음에는 `drvUartSetBaud()` 를 직접 불러
+ap 의 명령 처리가 채널 어댑터를 아는 구조였다. 그래서 BAUD 도 응답과 같은 길(cmd_boot → cmd.c → drv_uart → uart.c)로 내려간다.
 
 `ap.c` 는 `moduleInit()` / `moduleUpdate()` 만 부른다. cmd 모듈은 cli 보다 늦게(LOWEST) 열어 cli 에 RX 필터를 건다.
 

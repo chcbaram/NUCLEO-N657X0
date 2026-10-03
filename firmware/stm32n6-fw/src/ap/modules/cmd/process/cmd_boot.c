@@ -1,5 +1,4 @@
 #include "process/cmd_boot.h"
-#include "driver/drv_uart.h"
 #include "boot/boot.h"
 #include "util_core.h"
 
@@ -131,7 +130,7 @@ bool cmdBootProcess(cmd_t *p_cmd)
       info.boot2_addr    = FLASH_ADDR_BOOT2;
       info.data_addr     = FLASH_ADDR_DATA;
       info.data_size     = FLASH_SIZE_DATA;
-      info.baud          = drvUartGetBaud(p_cmd->p_driver);   // UART 가 아니면 0
+      info.baud          = cmdGetBaud(p_cmd);                // 보율이 없는 채널이면 0
       snprintf(info.name,    sizeof(info.name),    "%s", _DEF_BOARD_NAME);
       snprintf(info.version, sizeof(info.version), "%s", _DEF_FIRMWATRE_VERSION);
 
@@ -282,8 +281,8 @@ bool cmdBootProcess(cmd_t *p_cmd)
       else
       {
         memcpy(&baud, &p_data[0], 4);
-        if (drvUartGetBaud(p_cmd->p_driver) == 0)
-          err_code = ERR_BOOT_WRONG_CMD;          // UART 채널에서만 의미가 있다
+        if (cmdGetBaud(p_cmd) == 0)
+          err_code = ERR_BOOT_WRONG_CMD;          // 보율이 있는 채널(UART)에서만 의미가 있다
         else if (baud < BOOT_BAUD_MIN || baud > BOOT_BAUD_MAX)
           err_code = ERR_BOOT_WRONG_RANGE;
       }
@@ -292,7 +291,7 @@ bool cmdBootProcess(cmd_t *p_cmd)
       cmdSendResp(p_cmd, cmd, err_code, (uint8_t *)&baud, 4);
       if (err_code == OK)
       {
-        drvUartSetBaud(p_cmd->p_driver, baud);
+        cmdSetBaud(p_cmd, baud);
       }
       break;
     }

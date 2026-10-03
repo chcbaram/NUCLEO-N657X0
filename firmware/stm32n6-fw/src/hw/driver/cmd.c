@@ -302,4 +302,29 @@ bool cmdSendCmdRxResp(cmd_t *p_cmd, uint16_t cmd, uint8_t *p_data, uint32_t leng
 }
 
 
+/*
+ * 채널의 보율. 명령 처리(cmd_boot.c 등)는 채널 종류를 모르고 이것만 부른다.
+ * 드라이버가 set_baud / get_baud 를 채우지 않았으면 (USB CDC 등) false / 0.
+ */
+bool cmdSetBaud(cmd_t *p_cmd, uint32_t baud)
+{
+  cmd_driver_t *p_driver = p_cmd->p_driver;
+
+  if (p_driver == NULL || p_driver->set_baud == NULL)
+    return false;
+
+  return p_driver->set_baud(p_driver->args, baud);
+}
+
+uint32_t cmdGetBaud(cmd_t *p_cmd)
+{
+  cmd_driver_t *p_driver = p_cmd->p_driver;
+
+  if (p_driver == NULL || p_driver->get_baud == NULL)
+    return 0;
+
+  return p_driver->get_baud(p_driver->args);
+}
+
+
 #endif

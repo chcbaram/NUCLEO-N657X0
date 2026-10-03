@@ -53,6 +53,10 @@ typedef struct cmd_driver_t_
   bool     (*flush)(void *args);
   uint8_t  (*read)(void *args);
   uint32_t (*write)(void *args, uint8_t *p_data, uint32_t length);  
+
+  // 선택. UART 처럼 보율이 있는 채널만 채운다 (USB CDC 등은 NULL)
+  bool     (*set_baud)(void *args, uint32_t baud);
+  uint32_t (*get_baud)(void *args);
 } cmd_driver_t;
 
 
@@ -82,6 +86,9 @@ bool cmdSendType(cmd_t *p_cmd, CmdType_t type, uint8_t *p_data, uint32_t length)
 bool cmdSendCmd(cmd_t *p_cmd, uint16_t cmd, uint8_t *p_data, uint32_t length);
 bool cmdSendResp(cmd_t *p_cmd, uint16_t cmd, uint16_t err_code, uint8_t *p_data, uint32_t length);
 bool cmdSendCmdRxResp(cmd_t *p_cmd, uint16_t cmd, uint8_t *p_data, uint32_t length, uint32_t timeout);
+
+bool     cmdSetBaud(cmd_t *p_cmd, uint32_t baud);
+uint32_t cmdGetBaud(cmd_t *p_cmd);
 
 
 #endif

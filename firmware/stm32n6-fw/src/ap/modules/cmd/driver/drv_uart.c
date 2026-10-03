@@ -38,13 +38,14 @@ typedef struct
 
 
 static bool     drvUartRxFilter(uint8_t rx_data);
-static bool     drvUartIsUart(cmd_driver_t *p_driver);
 static bool     drvUartOpen(void *args);
 static bool     drvUartClose(void *args);
 static uint32_t drvUartAvailable(void *args);
 static bool     drvUartFlush(void *args);
 static uint8_t  drvUartRead(void *args);
 static uint32_t drvUartWrite(void *args, uint8_t *p_data, uint32_t length);
+static bool     drvUartSetBaud(void *args, uint32_t baud);
+static uint32_t drvUartGetBaud(void *args);
 
 static uint8_t   rx_buf[DRV_UART_RX_BUF_SIZE];
 static qbuffer_t rx_q;
@@ -76,6 +77,8 @@ bool drvUartInit(cmd_driver_t *p_driver, uint8_t ch, uint32_t baud)
   p_driver->flush     = drvUartFlush;
   p_driver->read      = drvUartRead;
   p_driver->write     = drvUartWrite;
+  p_driver->set_baud  = drvUartSetBaud;
+  p_driver->get_baud  = drvUartGetBaud;
 
   // RX 필터는 cli 에 하나뿐이라 UART cmd 채널도 하나다
   qbufferCreate(&rx_q, rx_buf, sizeof(rx_buf));
@@ -83,33 +86,9 @@ bool drvUartInit(cmd_driver_t *p_driver, uint8_t ch, uint32_t baud)
   return true;
 }
 
-bool drvUartSetBaud(cmd_driver_t *p_driver, uint32_t baud)
-{
-  drv_uart_args_t *p_args = (drv_uart_args_t *)p_driver->args;
-
-  if (drvUartIsUart(p_driver) != true)
-    return false;
-
-  act_time = millis();
-  return uartOpen(p_args->ch, baud);
-}
-
-uint32_t drvUartGetBaud(cmd_driver_t *p_driver)
-{
-  drv_uart_args_t *p_args = (drv_uart_args_t *)p_driver->args;
-
-  if (drvUartIsUart(p_driver) != true)
-    return 0;
-
-  return uartGetBaud(p_args->ch);
-}
-
 void drvUartUpdate(cmd_driver_t *p_driver)
 {
   drv_uart_args_t *p_args = (drv_uart_args_t *)p_driver->args;
-
-  if (drvUartIsUart(p_driver) != true)
-    return;
 
   if (uartGetBaud(p_args->ch) != p_args->baud &&
       millis() - act_time >= DRV_UART_BAUD_TIMEOUT)
@@ -180,11 +159,6 @@ bool drvUartRxFilter(uint8_t rx_data)
   return ret;
 }
 
-bool drvUartIsUart(cmd_driver_t *p_driver)
-{
-  return p_driver != NULL && p_driver->read == drvUartRead;
-}
-
 bool drvUartOpen(void *args)
 {
   (void)args;
@@ -225,6 +199,21 @@ uint32_t drvUartWrite(void *args, uint8_t *p_data, uint32_t length)
 
   act_time = millis();
   return uartWrite(p_args->ch, p_data, length);
+}
+
+bool drvUartSetBaud(void *args, uint32_t baud)
+{
+  drv_uart_args_t *p_args = (drv_uart_args_t *)args;
+
+  act_time = millis();
+  return uartOpen(p_args->ch, baud);
+}
+
+uint32_t drvUartGetBaud(void *args)
+{
+  drv_uart_args_t *p_args = (drv_uart_args_t *)args;
+
+  return uartGetBaud(p_args->ch);
 }
 
 #endif
