@@ -23,6 +23,8 @@ bool hwInit(void)
 
   logPrintf("\n");
 
+  rtcInit();
+  resetInit();
   bootromInit();
   otpInit();
   xspiInit();

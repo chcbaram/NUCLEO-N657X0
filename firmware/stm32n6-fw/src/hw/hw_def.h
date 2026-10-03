@@ -34,6 +34,18 @@
 #define      HW_LOG_LIST_BUF_MAX    4096
 
 
+#define _USE_HW_RTC
+#define      HW_RTC_BOOT_MODE       RTC_BKP_DR3
+#define      HW_RTC_RESET_BITS      RTC_BKP_DR4
+#define      HW_RTC_RESET_CNT       RTC_BKP_DR5
+#define      HW_RTC_BOOT_TRY        RTC_BKP_DR6
+#define      HW_RTC_FAULT_CNT       RTC_BKP_DR7
+
+#define _USE_HW_RESET
+#define      HW_RESET_BOOT          1
+#define      HW_RESET_DBLCLK_MS     300
+#define      HW_RESET_DBLCLK_CNT    2
+
 #define _USE_HW_XSPI
 #define      HW_XSPI_ADDR           0x70000000
 #define      HW_XSPI_SIZE           (64*1024*1024)
@@ -44,6 +56,8 @@
 //
 #define _USE_CLI_HW_LOG             1
 #define _USE_CLI_HW_UART            1
+#define _USE_CLI_HW_RTC             1
+#define _USE_CLI_HW_RESET           1
 #define _USE_CLI_HW_BOOTROM         1
 #define _USE_CLI_HW_OTP             1
 #define _USE_CLI_HW_XSPI            1

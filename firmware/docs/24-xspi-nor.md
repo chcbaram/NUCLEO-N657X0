@@ -195,6 +195,6 @@ XIP 중에는 `xspiRead()` 가 `memcpy` 로 읽고, 쓰기·지우기는 거부�
 
 ## 8. 다음
 
-- **서명 → 플래시 기록 → Flash boot** (`25-flash-boot.md`, 예정) — 주소 0 에 우리 FSBL 을 서명해서 쓰고 BOOT0=0, BOOT1=0 으로 부팅
+- **서명 → 플래시 기록 → Flash boot** (`26-flash-boot.md`, 예정) — 주소 0 에 우리 FSBL 을 서명해서 쓰고 BOOT0=0, BOOT1=0 으로 부팅
 - XIP 앱을 쓰게 되면 HSLV 퓨즈(200 MHz) 판단
 - 간접 읽기를 빠르게 해야 하면 DMA

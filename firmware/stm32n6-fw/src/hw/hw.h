@@ -11,6 +11,8 @@ extern "C" {
 #include "uart.h"
 #include "log.h"
 #include "cli.h"
+#include "rtc.h"
+#include "reset.h"
 #include "bootrom.h"
 #include "otp.h"
 #include "xspi.h"

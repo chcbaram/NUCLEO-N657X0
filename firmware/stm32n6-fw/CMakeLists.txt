@@ -56,6 +56,8 @@ set(SRC_FILES_ST
   ${HAL_DIR}/stm32n6xx_hal_uart_ex.c
   ${HAL_DIR}/stm32n6xx_hal_bsec.c
   ${HAL_DIR}/stm32n6xx_hal_xspi.c
+  ${HAL_DIR}/stm32n6xx_hal_rtc.c
+  ${HAL_DIR}/stm32n6xx_hal_rtc_ex.c
   )
 
 
