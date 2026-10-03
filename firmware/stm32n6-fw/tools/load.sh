@@ -52,9 +52,8 @@ GDB_PORT=${GDB_PORT:-61234}
 
 # VSCode 의 cortex-debug launch 와 같은 옵션으로 띄운다 (-d = --swd, --halt, -m 1).
 #
-#   예전에는 -k --attach 로 돌고 있는 펌웨어에 리셋 없이 붙었는데, 가끔 그 순간 보드가
-#   멈추고 전원 재인가가 필요했다 (docs/21-uart-cli.md 10 절). cortex-debug launch 는
-#   --attach 없이 --halt 로 시작하고, 이 방식은 항상 동작했다.
+#   리셋하고 BootROM 에서 세운 뒤 적재하므로 앞 펌웨어의 상태가 남지 않는다.
+#   (돌고 있는 펌웨어에 붙으면 보드가 멈추던 문제는 SystemInit() 에서 고쳤다 -> docs/27-swd-attach.md)
 #
 "$CLT/STLink-gdb-server/bin/ST-LINK_gdbserver" \
   -p "$GDB_PORT" -l 1 -d --halt -m 1 \

@@ -30,6 +30,41 @@
       "overrideLaunchCommands": [
         "load"
       ]
+    },
+    {
+      // 외부 NOR 에 쓰고(태스크 flash-ext) 리셋으로 다시 뜬 FSBL 에 붙는다. 쓰기는 하지 않는다.
+      //   Flash boot(JP1=0, JP2=0) 용. 리셋 없이 --attach 로 붙는다 (docs/27-swd-attach.md).
+      //   executable 은 심볼용이다. 플래시에 쓴 것과 같은 ELF 여야 한다 (다르면 gdb 가 엉뚱한 주소를 읽다 보드가 멈출 수 있다).
+      "name": "Flash + Attach FSBL",
+      "cwd": "${workspaceRoot}",
+      "executable": "./build/stm32n6-fw.elf",
+      "request": "attach",
+      "type": "cortex-debug",
+      "servertype": "stlink",
+      "showDevDebugOutput": "none",
+      "serverArgs": ["-m", "1"],
+      "preLaunchTask": "flash-ext",
+      "osx": {
+        "serverpath": "${userHome}/ST/STM32CubeCLT/STLink-gdb-server/bin/ST-LINK_gdbserver",
+        "stm32cubeprogrammer": "${userHome}/ST/STM32CubeCLT/STM32CubeProgrammer/bin",
+        "svdFile": "${userHome}/ST/STM32CubeCLT/STMicroelectronics_CMSIS_SVD/STM32N657.svd"
+      }
+    },
+    {
+      // 돌고 있는 FSBL 에 리셋 없이 붙기만 한다 (쓰기 없음).
+      "name": "Attach FSBL",
+      "cwd": "${workspaceRoot}",
+      "executable": "./build/stm32n6-fw.elf",
+      "request": "attach",
+      "type": "cortex-debug",
+      "servertype": "stlink",
+      "showDevDebugOutput": "none",
+      "serverArgs": ["-m", "1"],
+      "osx": {
+        "serverpath": "${userHome}/ST/STM32CubeCLT/STLink-gdb-server/bin/ST-LINK_gdbserver",
+        "stm32cubeprogrammer": "${userHome}/ST/STM32CubeCLT/STM32CubeProgrammer/bin",
+        "svdFile": "${userHome}/ST/STM32CubeCLT/STMicroelectronics_CMSIS_SVD/STM32N657.svd"
+      }
     }
   ]
 }

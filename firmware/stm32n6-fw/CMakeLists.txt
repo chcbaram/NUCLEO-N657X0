@@ -150,3 +150,31 @@ add_custom_command(TARGET ${EXECUTABLE}
   COMMAND ${CMAKE_OBJCOPY} ARGS -O binary ${EXECUTABLE} ${PRJ_NAME}.bin
   COMMENT "Invoking: Make Bin"
   )
+
+
+# .bin -> -trusted.bin (Flash boot 용 헤더, 키 없이 서명)
+#   CubeCLT 의 STM32_SigningTool_CLI 를 쓴다. 못 찾으면 서명만 건너뛴다.
+#   찾는 순서 : $CLT -> ~/ST/STM32CubeCLT(_*) -> /opt/ST -> C:/ST
+#   -nk : 키 없음 (secure_boot 퓨즈를 태우지 않은 보드 전용), -align : 페이로드를 0x400 에 맞춘다
+#   서명 도구가 결과를 읽기 전용으로 만들어서 먼저 지운다.
+#
+file(GLOB CLT_CANDIDATES
+  "$ENV{HOME}/ST/STM32CubeCLT_*"
+  "/opt/ST/STM32CubeCLT_*"
+  "C:/ST/STM32CubeCLT_*"
+  )
+set(CLT_HINTS "$ENV{CLT}" "$ENV{HOME}/ST/STM32CubeCLT" "/opt/ST/STM32CubeCLT" ${CLT_CANDIDATES})
+list(TRANSFORM CLT_HINTS APPEND "/STM32CubeProgrammer/bin")
+find_program(STM32_SIGNING_TOOL STM32_SigningTool_CLI HINTS ${CLT_HINTS})
+
+if(STM32_SIGNING_TOOL)
+  add_custom_command(TARGET ${EXECUTABLE}
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E rm -f ${PRJ_NAME}-trusted.bin
+    COMMAND ${STM32_SIGNING_TOOL} -bin ${PRJ_NAME}.bin -nk -of 0x80000000 -t fsbl -hv 2.3 -align -s
+            -o ${PRJ_NAME}-trusted.bin > ${CMAKE_CURRENT_BINARY_DIR}/sign.log
+    COMMENT "Invoking: Sign Bin (${PRJ_NAME}-trusted.bin)"
+    )
+else()
+  message(WARNING "STM32_SigningTool_CLI 를 찾지 못해 -trusted.bin 을 만들지 않는다 (CLT=<CubeCLT 경로>)")
+endif()

@@ -309,10 +309,10 @@ N6 는 CPU 클럭(IC1, 600 MHz)과 SYSCLK(IC2, 400 MHz)이 다르다.
 |---|---|---|
 | 시리얼에 아무것도 안 들어옴 | 테스트 스크립트(pyserial)와 baram-term 이 같은 포트를 동시에 열었다. macOS 는 둘 다 열리지만 수신 데이터를 나눠 가져간다 | baram-term 이 열려 있으면 `baram-ctl` 로만 주고받는다. 바이너리 테스트처럼 직접 열어야 하면 `baram-ctl release` → 테스트 → `resume` |
 | 배너는 나왔는데 에코가 안 됨 | gdb 로 `apMain` 브레이크포인트에서 세운 채 세션을 끝내서 코어가 에코 루프에 들어가지 못했다 | 동작 확인은 `load.sh`(detach 후 실행)로 한다 |
-| **돌고 있는 펌웨어에 SWD 로 붙으면 가끔 보드가 멈춤** (`Target unknown error 32` / `Unable to get core ID`, 그 순간 펌웨어도 멈춤) | 돌고 있는 코어에 리셋 없이 붙는 `-k --attach` 가 방아쇠. 그 안에서 무엇이 걸리는지는 미확정 (아래 조사 기록) | **`load.sh` 를 cortex-debug 와 같은 launch 방식(`--halt`, `--attach` 없음)으로 바꿨다** — 붙는 순간 리셋하고 BootROM 에서 세우므로 돌고 있는 코어에 붙지 않는다. 이미 멈췄다면 USB 재연결 |
+| **돌고 있는 펌웨어에 SWD 로 붙으면 가끔 보드가 멈춤** (`Target unknown error 32` / `Unable to get core ID`, 그 순간 펌웨어도 멈춤) | **해결 → [27](27-swd-attach.md)**. ST 템플릿 `SystemInit()` 이 SYSCFG 클럭을 끄고 `INITSVTORCR` 를 RAM 으로 바꾼 것. 아래 조사 기록은 당시 것이다 | **`load.sh` 를 cortex-debug 와 같은 launch 방식(`--halt`, `--attach` 없음)으로 바꿨다** — 붙는 순간 리셋하고 BootROM 에서 세우므로 돌고 있는 코어에 붙지 않는다. 이미 멈췄다면 USB 재연결 |
 | `gdb` 가 엉뚱한 값을 찍음 | 타깃 연결에 실패했는데 `-batch` 가 ELF 의 초기값을 그대로 출력했다 | 출력에 `could not connect` 가 있으면 값을 믿지 않는다 |
 
-### SWD attach 시 멈춤 — 조사 기록
+### SWD attach 시 멈춤 — 조사 기록 (당시, 원인은 [27](27-swd-attach.md))
 
 실패한 다섯 번은 모두 **돌고 있는 펌웨어에 디버거가 붙는 순간**이었다. 그 뒤로는 SWD 가
 코어(AP1)에 닿지 못하고 펌웨어도 멈춘다. 하나씩 걸러낸 것:

@@ -41,9 +41,8 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 
 ### 다음 작업
 
-1. SWD attach 시 멈춤의 원인 규명 — Flash boot 에서는 attach 밖에 없어서 디버거로 쓸 수 없다 → [26](26-flash-boot.md) 5절, [21](21-uart-cli.md) 10절
-2. UART CLI 로 플래시 쓰기 (디버거 없이 펌웨어 교체)
-3. FSBL / Application 분리 (LRUN 또는 XIP)
+1. UART CLI 로 플래시 쓰기 (디버거 없이 펌웨어 교체)
+2. FSBL / Application 분리 (LRUN 또는 XIP)
 
 ## 문서 번호 규칙
 
@@ -83,8 +82,9 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 | [23-bootrom-trace.md](23-bootrom-trace.md) | BootROM 트레이스 파서 (직접 작성, 라이선스 이유) | ✅ |
 | [24-xspi-nor.md](24-xspi-nor.md) | 외부 NOR (XSPI2) OPI DTR 50 MHz, XIP ~100 MB/s, HSLV 퓨즈 안 태움 | ✅ |
 | [25-rtc-reset.md](25-rtc-reset.md) | RTC(LSE, 백업 레지스터) + 리셋 원인 / 재부팅 CLI | ✅ |
-| [26-flash-boot.md](26-flash-boot.md) | 서명 → 외부 로더로 NOR 기록 → Flash boot. 디버거 attach 문제 남음 | ✅ |
-| `27-app-split.md` | FSBL / Application 분리 (LRUN 또는 XIP) | 예정 |
+| [26-flash-boot.md](26-flash-boot.md) | 서명 → 외부 로더로 NOR 기록 → Flash boot (`flash.py`, 태스크 `flash-ext`) | ✅ |
+| [27-swd-attach.md](27-swd-attach.md) | 돌고 있는 FSBL 에 디버거가 붙으면 멈추던 문제 — `SystemInit()` 의 SYSCFG 클럭 끄기 / `INITSVTORCR` | ✅ |
+| `28-app-split.md` | FSBL / Application 분리 (LRUN 또는 XIP) | 예정 |
 
 ## 그림
 

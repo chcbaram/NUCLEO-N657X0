@@ -2,29 +2,42 @@
 
 > FSBL 을 키 없이 서명해서 외부 NOR(0x70000000) 에 쓰고, BOOT0=0 / BOOT1=0 으로 부팅했다.
 > 쓰기에는 이 저장소에 새로 만든 **외부 로더**(`firmware/stm32n6-ext-loader`)를 쓴다.
-> Flash boot 에서 디버거가 붙지 않는 문제가 남았다 (5절).
+> Flash boot 에서 디버거가 붙지 않던 문제는 [27](27-swd-attach.md) 에서 풀었다.
 > 관련: [02-fsbl-loading.md](02-fsbl-loading.md) (헤더, 서명), [24-xspi-nor.md](24-xspi-nor.md) (xspi 드라이버)
 
 ---
 
-## 1. 한 번에 — `tools/flash.sh`
+## 1. 빌드 → 기록 → 디버그
 
 ```bash
 cd firmware/stm32n6-fw
-cmake --build build -j20
-./tools/flash.sh          # 서명 → 외부 로더로 기록·검증 → 리셋
+cmake --build build -j20  # build/stm32n6-fw.bin 과 서명본 build/stm32n6-fw-trusted.bin (post-build)
+python3 tools/flash.py    # 외부 로더로 기록·검증 → 리셋 (VSCode 태스크 flash-ext)
+                          # Windows 는 python tools/flash.py. 표준 라이브러리만 쓴다
 ```
 
-| 단계 | 명령 |
-|---|---|
-| 서명 | `STM32_SigningTool_CLI -bin stm32n6-fw.bin -nk -of 0x80000000 -t fsbl -hv 2.3 -align -o stm32n6-fw-trusted.bin` |
-| 기록 | `STM32_Programmer_CLI -c port=SWD ap=1 mode=Hotplug -el <로더>.stldr -w stm32n6-fw-trusted.bin 0x70000000 -v -hardRst` |
+| 단계 | 어디서 | 명령 |
+|---|---|---|
+| 서명 | **빌드 post-build** (`CMakeLists.txt`) | `STM32_SigningTool_CLI -bin stm32n6-fw.bin -nk -of 0x80000000 -t fsbl -hv 2.3 -align -s -o stm32n6-fw-trusted.bin` |
+| 기록 | `tools/flash.py` | `STM32_Programmer_CLI -c port=SWD ap=1 mode=Hotplug -halt -coreReg PRIMASK=1 -w32 … -el <로더>.stldr -w stm32n6-fw-trusted.bin 0x70000000 -v -hardRst` |
+| 디버그 | VSCode **Flash + Attach FSBL** | `flash-ext` 태스크 → 다시 뜬 FSBL 에 `--attach` 로 붙는다 (쓰기 없음). 쓰지 않고 붙기만 하려면 **Attach FSBL** |
 
 - `-nk` 키 없음. secure_boot 퓨즈를 태우지 않은 보드에서만 뜬다 ([01](01-boot-process.md))
 - `-align` 페이로드를 0x400 에 맞춘다. 링크 주소 `0x34180400` = 다운로드 버퍼 `0x34180000` + 헤더 0x400
-- 서명 도구는 결과를 읽기 전용으로 만든다. 스크립트가 지우고 새로 만든다
+- 서명 도구는 결과를 읽기 전용으로 만든다. 빌드가 먼저 지우고 새로 만든다
+- CMake 가 서명 도구를 못 찾으면(`$CLT`, `~/ST`, `/opt/ST`, `C:/ST`) 경고만 내고 서명을 건너뛴다
 - CubeProgrammer 는 연결에 실패해도 종료 코드가 0 일 때가 있다. 스크립트는 `Download verified successfully` 문구로 성공을 판단한다
-- **지금은 JP2=1 (Development boot) 에서만 쓸 수 있다** (5절)
+- Development boot / Flash boot 모두에서 **돌고 있는 FSBL 위에** 쓴다. 로더를 올리기 전에 코어를 세우고 PRIMASK, MPU, 캐시를 정리한다 ([27](27-swd-attach.md) 4절)
+- 기존 **Debug FSBL (SRAM)** 구성은 플래시에 쓰지 않는다. 리셋 → BootROM 에서 세우고 ELF 를 AXISRAM2 에 올려 실행한다 (JP2=1 용)
+
+### `flash.py` 인자 — 다른 프로젝트 이름으로 쓸 때
+
+| 인자 | 기본 | |
+|---|---|---|
+| `--bin` | `build/stm32n6-fw-trusted.bin` | 헤더(`STM2`)가 없으면 키 없이 서명해서 `<이름>-trusted.bin` 을 만든 뒤 쓴다 |
+| `--loader` | `../stm32n6-ext-loader/build/MX25UM51245G_NUCLEO-N657X0.stldr` | 기본 로더가 없으면 빌드한다 |
+| `--addr` | `0x70000000` | FSBL1 자리 (FSBL2 는 `0x70040000`) |
+| `--no-reset` | — | 기록 뒤 리셋하지 않는다 |
 
 | 결과 | |
 |---|---|
@@ -98,18 +111,8 @@ ST 커뮤니티 글은 Flash boot 에서 FSBL 이 `BSEC_AP_UNLOCK = 0xB4`, `BSEC
 
 ---
 
-## 5. 남은 문제 — Flash boot 에서 디버거가 붙지 않는다
+## 5. Flash boot 에서 디버거가 붙지 않던 문제 — 해결
 
-증상은 `Unable to get core ID` 이고, **그 순간 펌웨어도 멈춘다** (UART CLI 응답 없음, USB 재연결 필요).
-BSEC 은 열려 있으므로 잠금 문제가 아니다.
-
-이것은 [21](21-uart-cli.md) 10 절에서 보류한 **"돌고 있는 펌웨어에 SWD 로 붙으면 멈춤"** 과 같다.
-Development boot 에서도 `load.sh` 로 올린 펌웨어에 CubeProgrammer 로 붙자 똑같이 멈췄다.
-
-| 디버거가 붙는 방식 | Development boot | Flash boot |
-|---|---|---|
-| launch — 리셋하고 BootROM 에서 세운 뒤 붙는다 | ✅ (`load.sh`, `flash.sh`) | **불가능** — 리셋하면 BootROM 이 바로 FSBL 을 실행한다 |
-| attach — 돌고 있는 펌웨어에 붙는다 | 가끔 멈춤 | 이것밖에 없어서 멈춤 |
-
-그동안 launch 방식으로 피해 왔는데, Flash boot 에는 피할 길이 없어서 드러났다. 다음 작업에서 원인을 찾는다.
-그 전까지는 JP2=1 로 바꾸고 `flash.sh` 로 쓴다.
+처음에는 Flash boot 에서 디버거가 붙는 순간 보드가 멈췄다 (`Unable to get core ID`, USB 재연결 필요).
+BSEC 은 열려 있었고, 원인은 ST 템플릿 `SystemInit()` 의 SYSCFG 클럭 끄기와 `INITSVTORCR` 변경이었다.
+조사 과정과 수정은 [27-swd-attach.md](27-swd-attach.md).
