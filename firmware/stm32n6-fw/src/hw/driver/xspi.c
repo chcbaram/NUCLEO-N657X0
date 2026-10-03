@@ -79,6 +79,8 @@ static bool xspiFlashWriteEnable(void);
 static bool xspiFlashWaitReady(uint32_t timeout);
 static bool xspiFlashSetMode(xspi_mode_t new_mode);
 static bool xspiFlashErase(const xspi_cmd_t *p_code, bool has_addr, uint32_t addr, uint32_t timeout);
+static bool xspiReadRaw(uint32_t addr, uint8_t *p_data, uint32_t length);
+static bool xspiWritePage(uint32_t addr, uint8_t *p_data, uint32_t length);
 static bool xspiEnableMemoryMappedMode(void);   // 들어가는 길은 xspiSetXipMode(true) 하나로
 #if CLI_USE(HW_XSPI)
 static void cliCmd(cli_args_t *args);
@@ -160,12 +162,34 @@ bool xspiRead(uint32_t addr, uint8_t *p_data, uint32_t length)
     return true;
   }
 
-  if (xspiCmd(dtr ? &cmd_dtrd : &cmd_read, true, addr,
-              mode == XSPI_MODE_SPI ? DUMMY_READ_SPI : DUMMY_READ_OPI, length, dtr) != true)
+  /*
+   * OPI DTR 은 2 바이트 단위다. HAL 이 홀수 주소·길이를 거부하므로
+   * 앞뒤의 홀수 바이트는 짝수 2 바이트를 읽어 필요한 쪽만 꺼낸다.
+   */
+  if (dtr && (addr & 1))
   {
-    return false;
+    uint8_t pair[2];
+
+    if (xspiReadRaw(addr - 1, pair, 2) != true)
+      return false;
+    *p_data++ = pair[1];
+    addr++;
+    length--;
   }
-  return HAL_XSPI_Receive(&hxspi, p_data, XSPI_TIMEOUT) == HAL_OK;
+  if (dtr && (length & 1))
+  {
+    uint8_t pair[2];
+
+    if (xspiReadRaw(addr + length - 1, pair, 2) != true)
+      return false;
+    p_data[length - 1] = pair[0];
+    length--;
+  }
+  if (length == 0)
+  {
+    return true;
+  }
+  return xspiReadRaw(addr, p_data, length);
 }
 
 bool xspiWrite(uint32_t addr, uint8_t *p_data, uint32_t length)
@@ -173,6 +197,29 @@ bool xspiWrite(uint32_t addr, uint8_t *p_data, uint32_t length)
   if (is_init != true || is_xip == true || addr + length > xspiGetLength())
   {
     return false;
+  }
+
+  /*
+   * OPI DTR 은 2 바이트 단위다. 앞뒤의 홀수 바이트는 빈 쪽을 0xFF 로 채워 2 바이트로 쓴다.
+   * NOR 에 0xFF 를 프로그램하면 그 바이트는 바뀌지 않는다.
+   */
+  if (mode == XSPI_MODE_DTR && length > 0 && (addr & 1))
+  {
+    uint8_t pair[2] = {0xFF, p_data[0]};
+
+    if (xspiWritePage(addr - 1, pair, 2) != true)
+      return false;
+    p_data++;
+    addr++;
+    length--;
+  }
+  if (mode == XSPI_MODE_DTR && (length & 1))
+  {
+    uint8_t pair[2] = {p_data[length - 1], 0xFF};
+
+    if (xspiWritePage(addr + length - 1, pair, 2) != true)
+      return false;
+    length--;
   }
 
   while (length > 0)
@@ -183,10 +230,7 @@ bool xspiWrite(uint32_t addr, uint8_t *p_data, uint32_t length)
     {
       n = length;
     }
-    if (xspiFlashWriteEnable() != true ||
-        xspiCmd(&cmd_pp, true, addr, 0, n, false) != true ||
-        HAL_XSPI_Transmit(&hxspi, p_data, XSPI_TIMEOUT) != HAL_OK ||
-        xspiFlashWaitReady(XSPI_TIMEOUT) != true)
+    if (xspiWritePage(addr, p_data, n) != true)
     {
       return false;
     }
@@ -589,6 +633,27 @@ static bool xspiFlashErase(const xspi_cmd_t *p_code, bool has_addr, uint32_t add
 }
 
 /* 지금 모드의 읽기/쓰기 명령으로 memory-mapped 설정을 하고 들어간다 */
+bool xspiReadRaw(uint32_t addr, uint8_t *p_data, uint32_t length)
+{
+  bool dtr = (mode == XSPI_MODE_DTR);
+
+  if (xspiCmd(dtr ? &cmd_dtrd : &cmd_read, true, addr,
+              mode == XSPI_MODE_SPI ? DUMMY_READ_SPI : DUMMY_READ_OPI, length, dtr) != true)
+  {
+    return false;
+  }
+  return HAL_XSPI_Receive(&hxspi, p_data, XSPI_TIMEOUT) == HAL_OK;
+}
+
+bool xspiWritePage(uint32_t addr, uint8_t *p_data, uint32_t length)
+{
+  // 한 페이지 안에서만 부른다 (xspiWrite 가 나눈다)
+  return xspiFlashWriteEnable() == true &&
+         xspiCmd(&cmd_pp, true, addr, 0, length, false) == true &&
+         HAL_XSPI_Transmit(&hxspi, p_data, XSPI_TIMEOUT) == HAL_OK &&
+         xspiFlashWaitReady(XSPI_TIMEOUT) == true;
+}
+
 static bool xspiEnableMemoryMappedMode(void)
 {
   XSPI_RegularCmdTypeDef   cmd = {0};

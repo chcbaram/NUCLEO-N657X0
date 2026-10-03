@@ -50,14 +50,22 @@ FSBL 은 256 KB 를 넘으면 안 된다 (FSBL2 위치 = +0x40000 이 BootROM �
 
 ## 3. 대상별 쓰는 순서 — 전원이 끊겨도 부팅할 수 있게
 
+![FSBL1 / FSBL2 업데이트](images/fsbl-update.svg)
+
 | 대상 | BEGIN | ERASE | WRITE | END |
 |---|---|---|---|---|
 | **boot** | 아무것도 안 지운다 | FSBL2 슬롯 전체 | FSBL2 | FSBL2 의 `STM2` 헤더 확인 → FSBL1 지우고 복사 → CRC 비교 |
 | **fw** | **TAG 섹터부터 지운다** (즉시 무효) | TAG + 크기를 64 KB 로 올림 | 벡터부터 | CRC 계산 → **TAG 기록 = 커밋** |
 | **data** | 오프셋 4 KB 정렬 확인 | 4 KB 로 올림 | 오프셋부터 | CRC 만 |
 
-- **boot:** FSBL1 을 지우거나 복사하는 도중에 끊기면, FSBL2 가 이미 새 이미지라 BootROM 이 FSBL2 로 부팅한다.
-  FSBL2 에 쓰는 도중 끊기면 FSBL1 이 옛 이미지 그대로다. 서명 헤더가 없는 bin 은 END 에서 거부하고 FSBL1 을 건드리지 않는다
+- **boot:** FSBL2 에 쓰는 도중 끊기면 FSBL1 이 옛 이미지 그대로다. FSBL1 을 지우거나 복사하는 도중에 끊기면
+  FSBL2 가 이미 새 이미지라 BootROM 이 FSBL2 로 부팅한다. 서명 헤더가 없는 bin 은 END 에서 거부하고 FSBL1 을 건드리지 않는다
+- **FSBL1 은 헤더 매직(`STM2`)을 맨 마지막에 쓴다.** 이 보드(CLOSED_UNLOCKED, 키 없는 서명)는 BootROM 이 본문을 검증하지 않는다
+  ([02](02-fsbl-loading.md) 5.4절). 헤더부터 쓰면 반쯤 복사된 FSBL1 을 그대로 실행한다. 그래서 본문 → 헤더(매직 뒤) → 매직 순으로 쓴다
+- FSBL2 를 지우기 전에 FSBL1 이 깨져 있으면(앞선 업데이트가 복사 중에 끊김) FSBL2 로 FSBL1 을 먼저 되살린다.
+  안 그러면 FSBL2 를 지우는 순간 둘 다 없어진다
+- 실측: CLI `xspi erase 0 4096` 으로 FSBL1 헤더를 지우고 리셋 → BootROM 트레이스 `ERR 0x1D000002`(FSBL1) →
+  `INFO 0x80000002 0x00040000`(FSBL2) 로 부팅. 다음 업데이트 뒤 FSBL1 이 되살아나 `err=0` 으로 부팅
 - **fw:** TAG 의 크기는 `firm_ver_t.firm_size` 를 우선한다. 호스트 패딩으로 생기는 stale tag 를 막는다 (weact 에서 겪은 것)
 - END 는 `[size:4][crc:4]` 를 돌려준다 (CRC-16 `utilCalcCRC`). 호스트가 자기 계산과 비교한다
 
@@ -95,6 +103,8 @@ USB CDC 는 호스트가 연 보율로 주인을 가를 수 있지만 (weact: 11
 - 호스트가 포트를 열려면 baram-term 이 놓아야 한다. `download.py` 가 `baram-ctl release` / `resume` 을 한다
 
 ### 보율 올리기
+
+![UART 보율 올리기](images/uart-baud-switch.svg)
 
 1. 115200 으로 INFO
 2. `BAUD n` → 보드는 응답을 보내고 바꾼다 → 호스트도 바꾸고 INFO 로 확인
@@ -144,3 +154,5 @@ fw 200 KB (랜덤) : 지우기 0.95 s, 쓰기 0.79 s, 확인 0.09 s → 판정 T
 | 자동 포트가 엉뚱한 장치 | ST VID 를 쓰는 다른 장치(WISH61-HE 키보드)가 먼저 잡혔다 | ST-LINK PID / 이름으로 고른다 |
 | (설계) 최대 패킷이 수신 버퍼보다 큼 | UART RX 버퍼 1 KB < 패킷 1034 B | 4 KB 로 늘렸다 |
 | (설계) 115200 에서 1 KB 송신이 100 ms 타임아웃에 걸릴 수 있다 | `HAL_UART_Transmit` 타임아웃 고정 | 길이와 보율로 계산 |
+| 홀수 크기 이미지의 쓰기·확인 실패, CLI `xspi read` 가 홀수 주소에서 `Fail` | OPI DTR 은 2 바이트 단위라 HAL 이 홀수 주소·길이를 거부한다. 실패한 명령이 XSPI 를 오류 상태로 남겨 그 뒤 지우기까지 실패했다 | `xspiRead/Write` 가 앞뒤 홀수 바이트를 2 바이트로 감싼다 (읽기는 필요한 쪽만, 쓰기는 빈 쪽을 0xFF 로). 10001 B DATA, 200001 B FW 확인 |
+| (설계) 반쯤 복사된 FSBL1 이 실행될 수 있다 | 키 없는 서명이라 BootROM 이 본문을 검증하지 않는다 | FSBL1 매직을 마지막에 쓴다 (3절) |

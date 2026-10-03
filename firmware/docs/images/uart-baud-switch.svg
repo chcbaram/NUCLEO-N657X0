@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="770" viewBox="0 0 980 770" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR','Apple SD Gothic Neo',sans-serif">
+<defs><marker id="r" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1e40af"/></marker><marker id="l" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#166534"/></marker></defs>
+<rect width="980" height="770" fill="#fbfbfd"/>
+<text x="28" y="40" font-size="20" font-weight="700" fill="#1a1a2e">UART 다운로드 — 115200 으로 붙고, 명령으로 4 Mbps 까지 올린다</text>
+<text x="28" y="64" font-size="13" fill="#4b5563">CLI 와 같은 UART(ST-LINK VCP) 를 쓴다. 보드는 02 FD 로 시작하는 패킷만 cmd 로 가져가고 나머지 바이트는 CLI 로 보낸다.</text>
+<rect x="28" y="128" width="924" height="116" fill="#f3f4f6" opacity="0.85"/>
+<text x="38" y="191.0" font-size="13" font-weight="700" fill="#6b7280">115200</text>
+<rect x="28" y="244" width="924" height="222" fill="#dcfce7" opacity="0.85"/>
+<text x="38" y="360.0" font-size="13" font-weight="700" fill="#166534">4 Mbps</text>
+<rect x="28" y="466" width="924" height="100" fill="#f3f4f6" opacity="0.85"/>
+<text x="38" y="521.0" font-size="13" font-weight="700" fill="#6b7280">115200</text>
+<line x1="190" y1="128" x2="190" y2="566" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5 4"/>
+<line x1="600" y1="128" x2="600" y2="566" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5 4"/>
+<line x1="194" y1="156" x2="596" y2="156" stroke="#1e40af" stroke-width="2" marker-end="url(#r)"/>
+<text x="395.0" y="149" font-size="13" font-weight="600" fill="#1e40af" text-anchor="middle">INFO</text>
+<line x1="596" y1="182" x2="194" y2="182" stroke="#166534" stroke-width="2" stroke-dasharray="6 3" marker-end="url(#l)"/>
+<text x="395.0" y="175" font-size="12.5" fill="#166534" text-anchor="middle">응답 — 이름, 버전, 영역, 지금 보율</text>
+<line x1="194" y1="206" x2="596" y2="206" stroke="#1e40af" stroke-width="2" marker-end="url(#r)"/>
+<text x="395.0" y="199" font-size="13" font-weight="600" fill="#1e40af" text-anchor="middle">BAUD 4000000</text>
+<line x1="596" y1="228" x2="194" y2="228" stroke="#166534" stroke-width="2" stroke-dasharray="6 3" marker-end="url(#l)"/>
+<text x="395.0" y="221" font-size="12.5" fill="#166534" text-anchor="middle">OK — 115200 으로 끝까지 보낸 뒤에 바꾼다</text>
+<rect x="134" y="233" width="112" height="22" rx="11" fill="#7c3aed"/>
+<text x="190" y="248" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">→ 4 Mbps</text>
+<rect x="544" y="233" width="112" height="22" rx="11" fill="#7c3aed"/>
+<text x="600" y="248" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">→ 4 Mbps</text>
+<line x1="194" y1="292" x2="596" y2="292" stroke="#1e40af" stroke-width="2" marker-end="url(#r)"/>
+<text x="395.0" y="285" font-size="13" font-weight="600" fill="#1e40af" text-anchor="middle">INFO (새 보율로 확인)</text>
+<line x1="596" y1="318" x2="194" y2="318" stroke="#166534" stroke-width="2" stroke-dasharray="6 3" marker-end="url(#l)"/>
+<text x="395.0" y="311" font-size="12.5" fill="#166534" text-anchor="middle">응답</text>
+<line x1="194" y1="358" x2="596" y2="358" stroke="#1e40af" stroke-width="2" marker-end="url(#r)"/>
+<text x="395.0" y="351" font-size="13" font-weight="600" fill="#1e40af" text-anchor="middle">BEGIN · ERASE · WRITE × N · END</text>
+<line x1="596" y1="386" x2="194" y2="386" stroke="#166534" stroke-width="2" stroke-dasharray="6 3" marker-end="url(#l)"/>
+<text x="395.0" y="379" font-size="12.5" fill="#166534" text-anchor="middle">END 응답 — 크기, CRC → PC 가 자기 CRC 와 비교</text>
+<line x1="194" y1="424" x2="596" y2="424" stroke="#1e40af" stroke-width="2" marker-end="url(#r)"/>
+<text x="395.0" y="417" font-size="13" font-weight="600" fill="#1e40af" text-anchor="middle">BAUD 115200</text>
+<line x1="596" y1="450" x2="194" y2="450" stroke="#166534" stroke-width="2" stroke-dasharray="6 3" marker-end="url(#l)"/>
+<text x="395.0" y="443" font-size="12.5" fill="#166534" text-anchor="middle">OK</text>
+<rect x="134" y="455" width="112" height="22" rx="11" fill="#7c3aed"/>
+<text x="190" y="470" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">→ 115200</text>
+<rect x="544" y="455" width="112" height="22" rx="11" fill="#7c3aed"/>
+<text x="600" y="470" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">→ 115200</text>
+<line x1="194" y1="514" x2="596" y2="514" stroke="#1e40af" stroke-width="2" marker-end="url(#r)"/>
+<text x="395.0" y="507" font-size="13" font-weight="600" fill="#1e40af" text-anchor="middle">RESET (boot 대상)</text>
+<line x1="596" y1="540" x2="194" y2="540" stroke="#166534" stroke-width="2" stroke-dasharray="6 3" marker-end="url(#l)"/>
+<text x="395.0" y="533" font-size="12.5" fill="#166534" text-anchor="middle">새 FSBL 로 부팅</text>
+<rect x="110" y="80" width="160" height="40" rx="6" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+<text x="190" y="96" font-size="13.5" font-weight="700" fill="#1a1a2e" text-anchor="middle">PC</text>
+<text x="190" y="112" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">tools/download.py</text>
+<rect x="520" y="80" width="160" height="40" rx="6" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.5"/>
+<text x="600" y="96" font-size="13.5" font-weight="700" fill="#1a1a2e" text-anchor="middle">보드 (FSBL)</text>
+<text x="600" y="112" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">cmd 모듈 + CLI</text>
+<rect x="690" y="262" width="262" height="138" rx="8" fill="#fff7ed" stroke="#fdba74"/>
+<text x="704" y="286" font-size="13.5" font-weight="700" fill="#9a3412">실패해도 갇히지 않는다</text>
+<text x="704" y="310" font-size="12.5" fill="#7c2d12">새 보율에서 3 초 동안 주고받는</text>
+<text x="704" y="328" font-size="12.5" fill="#7c2d12">것이 없으면 보드가 스스로</text>
+<text x="704" y="346" font-size="12.5" fill="#7c2d12">115200 으로 돌아온다.</text>
+<text x="704" y="364" font-size="12.5" fill="#7c2d12">PC 가 보율을 못 바꿨거나 중간에</text>
+<text x="704" y="382" font-size="12.5" fill="#7c2d12">죽어도 CLI 가 다시 살아난다.</text>
+<rect x="690" y="408" width="262" height="50" rx="8" fill="#f5f3ff" stroke="#c4b5fd"/>
+<text x="704" y="429" font-size="12.5" fill="#5b21b6">패킷 최대 1 KB · 응답을 받고</text>
+<text x="704" y="447" font-size="12.5" fill="#5b21b6">다음 패킷을 보낸다 (왕복)</text>
+<text x="28" y="598" font-size="15" font-weight="700" fill="#1a1a2e">FSBL 110 KB 업데이트 합계 시간 (지우기 0.9 s + 쓰기 + 검증·복사 1.1 s)</text>
+<text x="140" y="625" font-size="12.5" fill="#374151" text-anchor="end" font-weight="400">115200</text>
+<rect x="150" y="612" width="640.0" height="17" rx="3" fill="#93c5fd"/>
+<text x="798.0" y="625" font-size="12.5" fill="#374151" font-weight="400">12.30 s</text>
+<text x="140" y="649" font-size="12.5" fill="#374151" text-anchor="end" font-weight="400">921600</text>
+<rect x="150" y="636" width="180.6" height="17" rx="3" fill="#93c5fd"/>
+<text x="338.6" y="649" font-size="12.5" fill="#374151" font-weight="400">3.47 s</text>
+<text x="140" y="673" font-size="12.5" fill="#374151" text-anchor="end" font-weight="400">2 M</text>
+<rect x="150" y="660" width="144.1" height="17" rx="3" fill="#93c5fd"/>
+<text x="302.1" y="673" font-size="12.5" fill="#374151" font-weight="400">2.77 s</text>
+<text x="140" y="697" font-size="12.5" fill="#374151" text-anchor="end" font-weight="700">4 M (기본)</text>
+<rect x="150" y="684" width="129.6" height="17" rx="3" fill="#22c55e"/>
+<text x="287.6" y="697" font-size="12.5" fill="#374151" font-weight="700">2.49 s</text>
+<text x="140" y="721" font-size="12.5" fill="#374151" text-anchor="end" font-weight="400">8 M</text>
+<rect x="150" y="708" width="121.8" height="17" rx="3" fill="#93c5fd"/>
+<text x="279.8" y="721" font-size="12.5" fill="#374151" font-weight="400">2.34 s</text>
+<text x="140" y="745" font-size="12.5" fill="#374151" text-anchor="end" font-weight="400">12 M</text>
+<rect x="150" y="732" width="121.8" height="17" rx="3" fill="#93c5fd"/>
+<text x="279.8" y="745" font-size="12.5" fill="#374151" font-weight="400">2.34 s</text>
+<text x="952" y="758" font-size="11.5" fill="#9ca3af" text-anchor="end">4 M 이상은 패킷 왕복이 지배해서 거의 줄지 않는다 · NUCLEO-N657X0, ST-LINK V3 VCP</text>
+</svg>

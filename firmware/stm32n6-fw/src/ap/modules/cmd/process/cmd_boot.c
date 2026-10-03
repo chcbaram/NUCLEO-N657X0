@@ -41,6 +41,7 @@
 #define BOOT_BLOCK_SIZE           0x10000
 #define BOOT_SECTOR_SIZE          0x1000
 #define BOOT_FSBL_MAGIC           0x324D5453 // "STM2" 서명 헤더
+#define BOOT_FSBL_HEADER_SIZE     0x400
 #define BOOT_BAUD_MIN             9600
 #define BOOT_BAUD_MAX             12500000
 
@@ -86,6 +87,8 @@ static uint16_t cmdBootErase(void);
 static uint16_t cmdBootEnd(uint32_t *p_size, uint32_t *p_crc);
 static uint16_t cmdBootEndFw(uint32_t *p_size, uint32_t *p_crc);
 static uint16_t cmdBootEndBoot(uint32_t *p_size, uint32_t *p_crc);
+static uint16_t cmdBootCopyFsbl(uint32_t src, uint32_t dst, uint32_t length);
+static bool     cmdBootIsFsbl(uint32_t addr);
 static bool     cmdBootCrc(uint32_t addr, uint32_t length, uint16_t *p_crc);
 static uint32_t cmdBootWriteBase(void);
 
@@ -376,6 +379,20 @@ uint16_t cmdBootErase(void)
       break;
 
     case BOOT_TARGET_BOOT:
+      /*
+       * FSBL2 를 지우기 전에 FSBL1 이 성한지 본다. 앞선 업데이트가 FSBL1 복사 중에 끊겼다면
+       * 지금은 FSBL2 로만 부팅되는 상태라, FSBL2 를 지우는 순간 둘 다 없어진다.
+       * 그때는 FSBL2 로 FSBL1 을 먼저 되살린다.
+       */
+      if (cmdBootIsFsbl(FLASH_ADDR_BOOT) != true && cmdBootIsFsbl(FLASH_ADDR_BOOT2) == true)
+      {
+        uint16_t err = cmdBootCopyFsbl(FLASH_ADDR_BOOT2, FLASH_ADDR_BOOT, FLASH_SIZE_BOOT);
+
+        logPrintf("[  ] boot repair FSBL2 -> FSBL1 : %s\n", err == OK ? "OK" : "Fail");
+        if (err != OK)
+          return err;
+      }
+
       // FSBL2 슬롯 전체. 옛 이미지의 꼬리가 남지 않게 한다
       addr = FLASH_ADDR_BOOT2;
       len  = FLASH_SIZE_BOOT;
@@ -458,35 +475,24 @@ uint16_t cmdBootEndBoot(uint32_t *p_size, uint32_t *p_crc)
   /*
    * FSBL2 에 받은 이미지를 확인하고 FSBL1 로 복사한다.
    *
-   * FSBL1 을 지우는 동안이나 복사 중에 전원이 끊겨도 FSBL2 가 이미 새 이미지라
-   * BootROM 이 FSBL2 로 부팅한다 (FSBL1 실패 시 FSBL2). 복사가 끝나면 둘 다 새 이미지다.
+   * 이 보드(CLOSED_UNLOCKED, 키 없는 서명)는 BootROM 이 본문을 검증하지 않는다. 헤더만 맞으면
+   * 반쯤 쓰인 FSBL1 도 그대로 실행한다. 그래서 복사는 **헤더의 매직을 맨 마지막에** 쓴다
+   * (cmdBootCopyFsbl). 매직이 없는 동안 BootROM 은 FSBL1 을 버리고 FSBL2(새 이미지)로 부팅한다.
    */
-  uint32_t magic = 0;
-  uint16_t crc2  = 0;
-  uint16_t crc1  = 0;
+  uint16_t crc2 = 0;
+  uint16_t crc1 = 0;
+  uint16_t err;
 
 
-  if (flashRead(FLASH_ADDR_BOOT2, (uint8_t *)&magic, 4) != true)
-    return ERR_BOOT_FLASH_READ;
-  if (magic != BOOT_FSBL_MAGIC)
+  if (cmdBootIsFsbl(FLASH_ADDR_BOOT2) != true)
     return ERR_BOOT_INVALID_FW;               // 서명 헤더가 없는 bin. FSBL1 은 건드리지 않는다
 
   if (cmdBootCrc(FLASH_ADDR_BOOT2, wr_index, &crc2) != true)
     return ERR_BOOT_FLASH_READ;
 
-  if (flashErase(FLASH_ADDR_BOOT, FLASH_SIZE_BOOT) != true)
-    return ERR_BOOT_FLASH_ERASE;
-
-  for (uint32_t i = 0; i < wr_index; i += sizeof(buf))
-  {
-    uint32_t n = wr_index - i;
-
-    if (n > sizeof(buf)) n = sizeof(buf);
-    if (flashRead(FLASH_ADDR_BOOT2 + i, buf, n) != true)
-      return ERR_BOOT_FLASH_READ;
-    if (flashWrite(FLASH_ADDR_BOOT + i, buf, n) != true)
-      return ERR_BOOT_FLASH_WRITE;
-  }
+  err = cmdBootCopyFsbl(FLASH_ADDR_BOOT2, FLASH_ADDR_BOOT, wr_index);
+  if (err != OK)
+    return err;
 
   if (cmdBootCrc(FLASH_ADDR_BOOT, wr_index, &crc1) != true)
     return ERR_BOOT_FLASH_READ;
@@ -497,6 +503,54 @@ uint16_t cmdBootEndBoot(uint32_t *p_size, uint32_t *p_crc)
   *p_crc  = crc1;
   logPrintf("[  ] boot end %d bytes, crc 0x%04X (FSBL2 -> FSBL1)\n", (int)wr_index, crc1);
   return OK;
+}
+
+uint16_t cmdBootCopyFsbl(uint32_t src, uint32_t dst, uint32_t length)
+{
+  /*
+   * 슬롯을 지우고 본문 -> 헤더(매직 뒤) -> 매직 4 바이트 순으로 쓴다.
+   * 매직이 커밋 마커다 (앱의 TAG 와 같은 생각). 지운 플래시는 0xFF 라 그 전까지 헤더가 무효다.
+   */
+  uint32_t magic = 0;
+
+
+  if (length < BOOT_FSBL_HEADER_SIZE || length > FLASH_SIZE_BOOT)
+    return ERR_BOOT_WRONG_RANGE;
+
+  if (flashErase(dst, FLASH_SIZE_BOOT) != true)
+    return ERR_BOOT_FLASH_ERASE;
+
+  for (uint32_t i = BOOT_FSBL_HEADER_SIZE; i < length; i += sizeof(buf))
+  {
+    uint32_t n = length - i;
+
+    if (n > sizeof(buf)) n = sizeof(buf);
+    if (flashRead(src + i, buf, n) != true)
+      return ERR_BOOT_FLASH_READ;
+    if (flashWrite(dst + i, buf, n) != true)
+      return ERR_BOOT_FLASH_WRITE;
+  }
+
+  if (flashRead(src, buf, BOOT_FSBL_HEADER_SIZE) != true)
+    return ERR_BOOT_FLASH_READ;
+  if (flashWrite(dst + 4, &buf[4], BOOT_FSBL_HEADER_SIZE - 4) != true)
+    return ERR_BOOT_FLASH_WRITE;
+
+  memcpy(&magic, &buf[0], 4);
+  if (flashWrite(dst, (uint8_t *)&magic, 4) != true)
+    return ERR_BOOT_FLASH_WRITE;
+
+  return OK;
+}
+
+bool cmdBootIsFsbl(uint32_t addr)
+{
+  uint32_t magic = 0;
+
+  if (flashRead(addr, (uint8_t *)&magic, 4) != true)
+    return false;
+
+  return magic == BOOT_FSBL_MAGIC;
 }
 
 bool cmdBootCrc(uint32_t addr, uint32_t length, uint16_t *p_crc)
