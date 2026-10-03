@@ -1,0 +1,177 @@
+cmake_minimum_required(VERSION 3.13)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools")
+include(arm-none-eabi-gcc)
+
+
+# 프로젝트 이름은 최종 출력 파일 이름으로 사용된다.
+#
+set(PRJ_NAME stm32n6-fw)
+
+
+# 앱 실행 방식. 링커 스크립트가 바뀐다 (docs/29-app-split.md)
+#   SRAM : FSBL 이 외부 NOR 의 이미지를 AXISRAM1(0x34000000) 로 복사한 뒤 실행
+#   XIP  : 외부 NOR(0x70101000) 에서 그대로 실행
+#   cmake -S . -B build -DAPP_RUN=XIP
+#
+set(APP_RUN "SRAM" CACHE STRING "앱 실행 방식 (SRAM | XIP)")
+set_property(CACHE APP_RUN PROPERTY STRINGS SRAM XIP)
+if(APP_RUN STREQUAL "XIP")
+  set(APP_LDSCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp/ldscript/stm32n657xx_xip.ld)
+else()
+  set(APP_LDSCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/src/bsp/ldscript/stm32n657xx_sram.ld)
+endif()
+message(STATUS "APP_RUN = ${APP_RUN} (${APP_LDSCRIPT})")
+
+
+# HAL / CMSIS 는 FSBL 프로젝트(stm32n6-boot)의 것을 그대로 쓴다 (복사하지 않는다)
+#
+set(BOOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../stm32n6-boot)
+
+
+project(${PRJ_NAME}
+  LANGUAGES ASM C CXX
+)
+
+
+set(EXECUTABLE ${PRJ_NAME}.elf)
+
+
+# 지정한 폴더에 있는 파일만 포함한다.
+#
+file(GLOB SRC_FILES CONFIGURE_DEPENDS
+  src/*.c
+  src/*.cpp
+  )
+
+# 하위폴더에 있는 파일까지 포함한다.
+#
+file(GLOB_RECURSE SRC_FILES_RECURSE CONFIGURE_DEPENDS
+  src/ap/*.c
+  src/ap/*.cpp
+  src/bsp/*.c
+  src/bsp/*.s
+  src/common/*.c
+  src/hw/*.c
+  )
+
+# ST HAL 은 glob 하지 않고 사용하는 모듈만 명시한다.
+#   - stm32n6xx_hal_conf.h 의 HAL_xxx_MODULE_ENABLED 와 짝을 맞춘다
+#   - 기능을 추가할 때 여기에 한 줄씩 늘린다
+#   (전체 glob 을 하면 비활성 모듈 소스가 같이 잡혀 빌드가 깨진다. 예: ll_dlyb)
+#
+set(HAL_DIR ${BOOT_DIR}/src/lib/ST/STM32N6xx_HAL_Driver/Src)
+set(SRC_FILES_ST
+  ${HAL_DIR}/stm32n6xx_hal.c
+  ${HAL_DIR}/stm32n6xx_hal_cortex.c
+  ${HAL_DIR}/stm32n6xx_hal_rcc.c
+  ${HAL_DIR}/stm32n6xx_hal_rcc_ex.c
+  ${HAL_DIR}/stm32n6xx_hal_gpio.c
+  ${HAL_DIR}/stm32n6xx_hal_exti.c
+  ${HAL_DIR}/stm32n6xx_hal_dma.c
+  ${HAL_DIR}/stm32n6xx_hal_dma_ex.c
+  ${HAL_DIR}/stm32n6xx_hal_pwr.c
+  ${HAL_DIR}/stm32n6xx_hal_pwr_ex.c
+  ${HAL_DIR}/stm32n6xx_hal_uart.c
+  ${HAL_DIR}/stm32n6xx_hal_uart_ex.c
+  ${HAL_DIR}/stm32n6xx_hal_rtc.c
+  ${HAL_DIR}/stm32n6xx_hal_rtc_ex.c
+  )
+
+
+add_executable(${EXECUTABLE}
+  ${SRC_FILES}
+  ${SRC_FILES_RECURSE}
+  ${SRC_FILES_ST}
+  )
+
+
+target_include_directories(${EXECUTABLE} PRIVATE
+  src
+  src/ap
+  src/ap/modules
+  src/ap/modules/cmd
+  src/bsp
+  src/bsp/device
+  src/common
+  src/common/core
+  src/common/hw/include
+  src/hw
+  src/hw/driver
+
+  ${BOOT_DIR}/src/lib/ST/CMSIS/Include
+  ${BOOT_DIR}/src/lib/ST/CMSIS/Device/ST/STM32N6xx/Include
+  ${BOOT_DIR}/src/lib/ST/STM32N6xx_HAL_Driver/Inc
+  )
+
+target_compile_definitions(${EXECUTABLE} PRIVATE
+  -DSTM32N657xx
+  -DUSE_HAL_DRIVER
+  -DUSE_FULL_ASSERT
+  -DAPP_RUN_${APP_RUN}
+  )
+
+target_compile_options(${EXECUTABLE} PRIVATE
+  -mcpu=cortex-m55
+  -mthumb
+  -mfpu=fpv5-d16
+  -mfloat-abi=hard
+  # 앱도 FSBL 에 이어 secure state 로 실행된다. CMSIS core 헤더가 SAU / SCB_NS 를
+  # 노출하려면 __ARM_FEATURE_CMSE == 3 이어야 하고, 그건 -mcmse 로 켜진다.
+  -mcmse
+
+  -fdata-sections
+  -ffunction-sections
+
+  -fstack-usage
+  -Wmissing-field-initializers
+  -Wuninitialized
+
+  -Wall
+  -g3
+  -O0
+  )
+
+set_source_files_properties(
+  ${SRC_FILES_ST}
+  PROPERTIES
+    COMPILE_OPTIONS "-O2;-w"
+  )
+
+target_link_options(${EXECUTABLE} PRIVATE
+  -T${APP_LDSCRIPT}
+
+  -mcpu=cortex-m55
+  -mthumb
+  -mfpu=fpv5-d16
+  -mfloat-abi=hard
+  -mcmse
+  -specs=nano.specs
+  -specs=nosys.specs
+
+  -lc
+  -lm
+  -fno-rtti
+
+  -Wl,-Map=${PRJ_NAME}.map,--cref
+  -Wl,--gc-sections
+  -Wl,--no-warn-rwx-segments
+  -Xlinker -print-memory-usage -Xlinker
+  )
+
+set(CMAKE_C_FLAGS   "-Wenum-conversion")
+set(CMAKE_CXX_FLAGS "-fno-rtti")
+
+
+# .elf -> .bin
+#
+add_custom_command(TARGET ${EXECUTABLE}
+  POST_BUILD
+  COMMAND ${CMAKE_OBJCOPY} ARGS -O binary ${EXECUTABLE} ${PRJ_NAME}.bin
+  COMMENT "Invoking: Make Bin"
+  )
+
+# 링커 스크립트만 고쳐도 다시 링크되게 한다
+set_target_properties(${EXECUTABLE} PROPERTIES LINK_DEPENDS ${APP_LDSCRIPT})
+
+# 앱은 BootROM 이 읽지 않으므로 ST 서명 헤더가 없다. FSBL 이 TAG(firm_tag_t) 로 확인한다.

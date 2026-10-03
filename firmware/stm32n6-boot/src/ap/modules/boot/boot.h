@@ -16,6 +16,7 @@ typedef enum
 
 
 BootImgType_t bootVerifyFirm(void);
+bool          bootJumpFirm(void);
 bool          bootGetTag(firm_tag_t *p_tag);
 bool          bootGetVer(firm_ver_t *p_ver);
 

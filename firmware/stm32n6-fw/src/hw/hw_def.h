@@ -6,11 +6,7 @@
 
 
 #define _DEF_FIRMWATRE_VERSION    "V260826R1"
-#define _DEF_BOARD_NAME           "STM32N6-BOOT"
-
-#define _USE_HW_BOOTROM
-#define _USE_HW_OTP
-#define _USE_HW_FLASH
+#define _DEF_BOARD_NAME           "STM32N6-FW"
 
 
 #define _USE_HW_LED
@@ -43,20 +39,16 @@
 #define      HW_RTC_FAULT_CNT       RTC_BKP_DR7
 
 #define _USE_HW_RESET
-#define      HW_RESET_BOOT          1
+#define      HW_RESET_BOOT          0
 #define      HW_RESET_DBLCLK_MS     300
 #define      HW_RESET_DBLCLK_CNT    2
-
-#define _USE_HW_XSPI
-#define      HW_XSPI_ADDR           0x70000000
-#define      HW_XSPI_SIZE           (64*1024*1024)
 
 #define _USE_HW_CMD
 #define      HW_CMD_MAX_DATA_LENGTH 1024
 #define      HW_CMD_UART_CH         HW_UART_CH_CLI
 
 
-#define HW_DEV_MODE                 HW_DEV_MODE_BOOT
+#define HW_DEV_MODE                 HW_DEV_MODE_APP
 
 #define FLASH_ADDR_BOOT             0x70000000
 #define FLASH_ADDR_BOOT2            0x70040000
@@ -67,9 +59,7 @@
 #define FLASH_SIZE_VEC              0x400
 #define FLASH_ADDR_FIRM_VEC         (FLASH_ADDR_FIRM + FLASH_SIZE_TAG)
 #define FLASH_ADDR_DATA             0x71100000
-#define FLASH_SIZE_DATA             (HW_XSPI_ADDR + HW_XSPI_SIZE - FLASH_ADDR_DATA)
-#define APP_SRAM_ADDR               0x34000000
-#define APP_SRAM_SIZE               (1024*1024)
+#define FLASH_SIZE_DATA             (0x74000000 - FLASH_ADDR_DATA)
 
 
 
@@ -80,9 +70,6 @@
 #define _USE_CLI_HW_RTC             1
 #define _USE_CLI_HW_RESET           1
 #define _USE_CLI_HW_MODULE          1
-#define _USE_CLI_HW_BOOTROM         1
-#define _USE_CLI_HW_OTP             1
-#define _USE_CLI_HW_XSPI            1
 
 
 #endif

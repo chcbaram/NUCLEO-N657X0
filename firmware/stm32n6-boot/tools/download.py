@@ -6,7 +6,8 @@
   대상
     boot : FSBL (서명본 -trusted.bin). 보드가 FSBL2 에 쓰고 검증한 뒤 FSBL1 로 복사한다.
            기본 bin 은 build/stm32n6-boot-trusted.bin, 끝나면 리셋한다 (--no-reset 으로 끈다)
-    fw   : 앱. 앞에 TAG 섹터가 있고, 다 쓴 뒤 보드가 TAG 를 기록한다 (커밋)
+    fw   : 앱 (기본 bin: ../stm32n6-fw/build/stm32n6-fw.bin). 다 쓴 뒤 보드가 TAG 를 기록하고 (커밋)
+           앱으로 점프한다 (--no-reset 으로 끈다)
     data : 데이터 영역 + --offset (4 KB 단위)
 
   cmd 패킷은 CLI 와 같은 UART 로 간다. 보드는 02 FD 로 시작하는 패킷만 골라낸다.
@@ -29,6 +30,7 @@ from cmdproto import *   # noqa: E402,F403
 
 PRJ_DIR   = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DEF_BOOT  = os.path.join(PRJ_DIR, "build", "stm32n6-boot-trusted.bin")
+DEF_FW    = os.path.abspath(os.path.join(PRJ_DIR, "..", "stm32n6-fw", "build", "stm32n6-fw.bin"))
 BAUD_DEF  = 115200
 CHUNK     = 1016                 # cmd 데이터 최대 1024 B - offset 4 B
 FSBL_MAGIC = b"STM2"
@@ -144,12 +146,12 @@ def download(ch, target, image, offset, args):
 
 def main():
   ap = argparse.ArgumentParser(description="UART 로 FSBL / 앱 / 데이터 내려받기")
-  ap.add_argument("binary", nargs="?", help="보낼 bin (boot 기본: build/stm32n6-boot-trusted.bin)")
+  ap.add_argument("binary", nargs="?", help="보낼 bin (boot: build/stm32n6-boot-trusted.bin, fw: ../stm32n6-fw/build/stm32n6-fw.bin)")
   ap.add_argument("--target", choices=["boot", "fw", "data"], default="boot")
   ap.add_argument("--offset", type=lambda s: int(s, 0), default=0, help="data 영역 안 오프셋 (4 KB 단위)")
   ap.add_argument("--port", help="시리얼 포트. 없거나 auto 면 ST-LINK VCP 자동")
   ap.add_argument("--baud", type=int, default=4000000, help="전송 보율 (기본 4 Mbps, 0 이면 115200 그대로)")
-  ap.add_argument("--no-reset", action="store_true", help="boot 대상에서 끝난 뒤 리셋하지 않는다")
+  ap.add_argument("--no-reset", action="store_true", help="끝난 뒤 리셋(boot) / 앱 실행(fw) 을 하지 않는다")
   ap.add_argument("--no-baram", action="store_true", help="baram-term 포트 놓기/다시 열기를 하지 않는다")
   args = ap.parse_args()
 
@@ -157,7 +159,7 @@ def main():
   sys.stdout.reconfigure(line_buffering=True)
 
   target = {"boot": TARGET_BOOT, "fw": TARGET_FW, "data": TARGET_DATA}[args.target]
-  path = args.binary or (DEF_BOOT if target == TARGET_BOOT else None)
+  path = args.binary or {TARGET_BOOT: DEF_BOOT, TARGET_FW: DEF_FW}.get(target)
   if not path or not os.path.isfile(path):
     sys.exit(f"bin 이 없다: {path}")
   image = open(path, "rb").read()
@@ -175,7 +177,17 @@ def main():
       info = parse_info(ch.request(BOOT_CMD_INFO, timeout=2.0)["data"])
       print(f"연결     : {port}  {info['name']} {info['version']}  [{info['mode_str']}]")
       if info["mode"] != DEV_MODE_BOOT:
-        sys.exit("앱이다. 부트로더(FSBL)에서만 쓸 수 있다")
+        # 앱이 돌고 있다. FSBL 에 머물러 달라고 하고(FW_UPDATE → resetToBoot) 다시 붙는다
+        print("         앱이 실행 중 → FSBL 로 넘어가 다시 붙는다")
+        try:
+          ch.request(BOOT_CMD_FW_UPDATE, timeout=1.0)
+        except TimeoutError:
+          pass
+        time.sleep(1.5)
+        info = parse_info(ch.request(BOOT_CMD_INFO, timeout=3.0)["data"])
+        print(f"연결     : {port}  {info['name']} {info['version']}  [{info['mode_str']}]")
+        if info["mode"] != DEV_MODE_BOOT:
+          sys.exit("FSBL 로 넘어가지 않았다")
       if info["cmd_ver"] == 0:
         sys.exit("확장 INFO 가 없다 (다른 보드의 부트로더?)")
 
@@ -204,6 +216,9 @@ def main():
         except TimeoutError:
           pass
         print("리셋     : 새 FSBL 로 부팅")
+      if target == TARGET_FW and not args.no_reset:
+        r = ch.request(BOOT_CMD_FW_JUMP, timeout=2.0)
+        print("실행     : 앱으로 점프" if r["err"] == 0 else f"실행     : 실패 err={err_str(r['err'])}")
     finally:
       ser.close()
 

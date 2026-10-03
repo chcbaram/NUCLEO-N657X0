@@ -1,0 +1,56 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // 실행 방식은 CMake 캐시의 APP_RUN (SRAM | XIP). 바꾸려면 build 를 지우고
+      //   cmake -S . -B build -DAPP_RUN=XIP
+      "label": "build-configure",
+      "type": "shell",
+      "command": "cmake -S . -B build",
+      "problemMatcher": []
+    },
+    {
+      // -j20 고정 (stm32n6-boot 와 같은 이유)
+      "label": "build-build",
+      "type": "shell",
+      "command": "cmake --build build -j20",
+      "dependsOn": "build-configure",
+      "problemMatcher": ["$gcc"],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "build-clean",
+      "type": "shell",
+      "command": "cmake --build build --target clean",
+      "problemMatcher": []
+    },
+    {
+      // UART(ST-LINK VCP) 로 앱을 내려받고 실행한다 (docs/29-app-split.md).
+      //   앱이 돌고 있으면 툴이 FSBL 로 넘긴 뒤 쓴다. 빌드는 하지 않는다.
+      "label": "download-uart",
+      "type": "shell",
+      "command": "python3 ../stm32n6-boot/tools/download.py --target fw build/stm32n6-fw.bin",
+      "windows": { "command": "python ../stm32n6-boot/tools/download.py --target fw build/stm32n6-fw.bin" },
+      "problemMatcher": []
+    },
+    {
+      // 포트를 직접 고른다 (Firmware Task Manager 확장이 목록을 띄운다)
+      "label": "download-uart (포트 선택)",
+      "type": "shell",
+      "command": "python3 ../stm32n6-boot/tools/download.py --target fw build/stm32n6-fw.bin --port ${input:uartPort}",
+      "windows": { "command": "python ../stm32n6-boot/tools/download.py --target fw build/stm32n6-fw.bin --port ${input:uartPort}" },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "uartPort",
+      "type": "command",
+      "command": "firmware-task.pickSerialPort",
+      "args": {
+        "placeholder": "ST-LINK VCP (CLI 포트) 를 고른다",
+        "filter": "usbmodem|ttyACM|COM"
+      }
+    }
+  ]
+}

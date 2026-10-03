@@ -266,8 +266,17 @@ bool cmdBootProcess(cmd_t *p_cmd)
 
     case BOOT_CMD_FW_UPDATE:
     case BOOT_CMD_FW_JUMP:
-      // 앱 실행(LRUN / XIP)은 아직 없다 (FSBL / 앱 분리 작업에서 붙인다)
-      cmdSendResp(p_cmd, cmd, ERR_BOOT_JUMP_TO_FW, NULL, 0);
+      // FSBL 에서는 앱으로 점프한다. 앱이 없으면 점프하지 않고 오류를 돌려준다
+      if (bootVerifyFirm() != BOOT_IMG_TAG)
+      {
+        cmdSendResp(p_cmd, cmd, ERR_BOOT_INVALID_FW, NULL, 0);
+      }
+      else
+      {
+        cmdSendResp(p_cmd, cmd, OK, NULL, 0);
+        delay(50);                // 응답이 나갈 시간
+        bootJumpFirm();
+      }
       break;
 
     case BOOT_CMD_BAUD:
