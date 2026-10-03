@@ -66,7 +66,7 @@
 <text x="48" y="618" font-size="12" fill="#6b7280">이미지 + RAM 사용이 1 MB 안에 들어가야 한다</text>
 <rect x="562" y="84" width="510" height="560" rx="10" fill="#ffffff" stroke="#e5e7eb"/>
 <text x="582" y="112" font-size="16" font-weight="700" fill="#9a3412">APP_RUN = XIP</text>
-<text x="582" y="131" font-size="11.5" fill="#6b7280" font-family="ui-monospace,Menlo,monospace">stm32n657xx_xip.ld  [미검증]</text>
+<text x="582" y="131" font-size="11.5" fill="#6b7280" font-family="ui-monospace,Menlo,monospace">stm32n657xx_xip.ld</text>
 <text x="652" y="156" font-size="12.5" font-weight="700" fill="#1a1a2e">외부 NOR (XSPI2)</text>
 <text x="862" y="156" font-size="12.5" font-weight="700" fill="#1a1a2e">내부 RAM</text>
 <rect x="652" y="166" width="130" height="40" fill="#dbeafe" stroke="#60a5fa" stroke-width="1.2"/>

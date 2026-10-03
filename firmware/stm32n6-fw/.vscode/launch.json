@@ -2,6 +2,24 @@
   "version": "0.2.0",
   "configurations": [
     {
+      // ST-LINK 로 앱을 쓰고(태스크 flash-ext) 리셋한 뒤, FSBL 이 실행한 앱에 붙는다 (리셋 없이 --attach).
+      //   flash-ext 는 빌드를 하지 않는다. 빌드는 build-build 로 먼저 한다.
+      "name": "Flash + Attach FW",
+      "cwd": "${workspaceRoot}",
+      "executable": "./build/stm32n6-fw.elf",
+      "request": "attach",
+      "type": "cortex-debug",
+      "servertype": "stlink",
+      "showDevDebugOutput": "none",
+      "serverArgs": ["-m", "1"],
+      "preLaunchTask": "flash-ext",
+      "osx": {
+        "serverpath": "${userHome}/ST/STM32CubeCLT/STLink-gdb-server/bin/ST-LINK_gdbserver",
+        "stm32cubeprogrammer": "${userHome}/ST/STM32CubeCLT/STM32CubeProgrammer/bin",
+        "svdFile": "${userHome}/ST/STM32CubeCLT/STMicroelectronics_CMSIS_SVD/STM32N657.svd"
+      }
+    },
+    {
       // FSBL 이 앱을 실행한 뒤 붙는다 (리셋 없이 --attach). 쓰기는 하지 않는다.
       //   executable 은 심볼용이다. 보드에서 돌고 있는 앱과 같은 ELF 여야 한다
       //   (다르면 gdb 가 엉뚱한 주소를 읽다 보드가 멈출 수 있다 — stm32n6-boot docs/27)

@@ -2,19 +2,11 @@
   "version": "2.0.0",
   "tasks": [
     {
-      // 실행 방식은 CMake 캐시의 APP_RUN (SRAM | XIP). 바꾸려면 build 를 지우고
-      //   cmake -S . -B build -DAPP_RUN=XIP
-      "label": "build-configure",
-      "type": "shell",
-      "command": "cmake -S . -B build",
-      "problemMatcher": []
-    },
-    {
-      // -j20 고정 (stm32n6-boot 와 같은 이유)
+      // 실행 방식(SRAM / XIP)을 고르고 구성 + 빌드한다. Firmware Task Manager 에서 ⚙️ 로 미리 골라 두면 다시 묻지 않는다.
+      //   구성과 빌드를 ; 로 잇는다 (&& 는 PowerShell 5.1 에서 안 된다. dependsOn 으로 나누면 확장이 입력을 못 채운다)
       "label": "build-build",
       "type": "shell",
-      "command": "cmake --build build -j20",
-      "dependsOn": "build-configure",
+      "command": "cmake -S . -B build -DAPP_RUN=${input:appRun}; cmake --build build -j20",
       "problemMatcher": ["$gcc"],
       "group": { "kind": "build", "isDefault": true }
     },
@@ -22,6 +14,15 @@
       "label": "build-clean",
       "type": "shell",
       "command": "cmake --build build --target clean",
+      "problemMatcher": []
+    },
+    {
+      // ST-LINK(외부 로더) 로 앱을 쓰고 리셋한다. TAG 는 PC 에서 계산해 이미지 앞에 붙인다 (flash.py --target fw).
+      //   FSBL 이 돌고 있든 앱이 돌고 있든 그 위에 쓴다. 빌드는 하지 않는다.
+      "label": "flash-ext",
+      "type": "shell",
+      "command": "python3 ../stm32n6-boot/tools/flash.py --target fw --bin build/stm32n6-fw.bin",
+      "windows": { "command": "python ../stm32n6-boot/tools/flash.py --target fw --bin build/stm32n6-fw.bin" },
       "problemMatcher": []
     },
     {
@@ -43,6 +44,16 @@
     }
   ],
   "inputs": [
+    {
+      "id": "appRun",
+      "type": "pickString",
+      "description": "앱 실행 방식 (docs/29-app-split.md)",
+      "options": [
+        { "label": "SRAM — FSBL 이 AXISRAM1 로 복사해서 실행", "value": "SRAM" },
+        { "label": "XIP — 외부 NOR 에서 그대로 실행", "value": "XIP" }
+      ],
+      "default": "SRAM"
+    },
     {
       "id": "uartPort",
       "type": "command",

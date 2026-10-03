@@ -34,9 +34,10 @@ python3 tools/flash.py    # 외부 로더로 기록·검증 → 리셋 (VSCode �
 
 | 인자 | 기본 | |
 |---|---|---|
-| `--bin` | `build/stm32n6-boot-trusted.bin` | 헤더(`STM2`)가 없으면 키 없이 서명해서 `<이름>-trusted.bin` 을 만든 뒤 쓴다 |
+| `--target` | `boot` | `fw` 면 앱: TAG 를 만들어 붙인 `<이름>-tag.bin` 을 `0x70100000` 에 쓴다 (서명 없음, [29](29-app-split.md)) |
+| `--bin` | boot: `build/stm32n6-boot-trusted.bin` / fw: `../stm32n6-fw/build/stm32n6-fw.bin` | boot 는 헤더(`STM2`)가 없으면 키 없이 서명해서 `<이름>-trusted.bin` 을 만든 뒤 쓴다 |
 | `--loader` | `../stm32n6-ext-loader/build/MX25UM51245G_NUCLEO-N657X0.stldr` | 기본 로더가 없으면 빌드한다 |
-| `--addr` | `0x70000000` | FSBL1 자리 (FSBL2 는 `0x70040000`) |
+| `--addr` | boot `0x70000000` / fw `0x70100000` | FSBL1 자리 (FSBL2 는 `0x70040000`) / 앱 TAG 자리 |
 | `--no-reset` | — | 기록 뒤 리셋하지 않는다 |
 
 | 결과 | |

@@ -4,8 +4,10 @@
 
 static void bspDebugOpen(void);
 static void bspMpuInit(void);
+#if !defined(APP_RUN_XIP)
 static void bspCoreVoltageOverdrive(void);
 static bool bspClockInit(void);
+#endif
 
 
 bool bspInit(void)
@@ -28,10 +30,17 @@ bool bspInit(void)
     return false;
   }
 
+#if defined(APP_RUN_XIP)
+  // XSPI2 커널 클럭(IC3)이 PLL1 에서 나온다. 코드를 NOR 에서 읽는 중에 PLL1 을 다시 설정하면
+  // 인출이 멈춘다. FSBL 이 맞춰 둔 클럭(800 MHz)을 그대로 쓰고 SystemCoreClock 만 갱신한다.
+  SystemCoreClockUpdate();
+  HAL_InitTick(TICK_INT_PRIORITY);
+#else
   if (bspClockInit() != true)
   {
     return false;
   }
+#endif
 
   return true;
 }
@@ -106,6 +115,7 @@ static void bspMpuInit(void)
   __set_PRIMASK(primask);
 }
 
+#if !defined(APP_RUN_XIP)
 /*
   V_DDCORE 를 overdrive(0.89 V)로 올린다.
 
@@ -246,6 +256,7 @@ static bool bspClockInit(void)
 
   return true;
 }
+#endif
 
 void delay(uint32_t ms)
 {

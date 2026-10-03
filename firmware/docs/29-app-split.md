@@ -1,7 +1,7 @@
 # 29. FSBL / 앱 분리 — stm32n6-boot + stm32n6-fw
 
 > FSBL(`firmware/stm32n6-boot`)이 부트로더를 겸하고, 앱(`firmware/stm32n6-fw`)을 외부 NOR 에서 꺼내 실행한다.
-> 앱 실행 방식은 빌드 옵션 `APP_RUN` 으로 고른다 — **SRAM**(복사해서 실행, 확인함) / **XIP**(NOR 에서 그대로, 아직 미검증).
+> 앱 실행 방식은 빌드 옵션 `APP_RUN` 으로 고른다 — **SRAM**(AXISRAM1 로 복사해서 실행) / **XIP**(NOR 에서 그대로). 둘 다 보드에서 확인했다.
 > FSBL 은 앱 이미지의 `firm_ver_t.firm_addr` 로 방식을 알아서 고르므로 FSBL 쪽 설정은 없다.
 > 관련: [28](28-uart-download.md) (UART 다운로드), [25](25-rtc-reset.md) (부트 모드 / 리셋)
 
@@ -12,7 +12,7 @@
 ```bash
 # 앱 빌드 (기본 APP_RUN=SRAM)
 cd firmware/stm32n6-fw
-cmake -S . -B build                 # XIP 로 하려면 -DAPP_RUN=XIP (build 를 지우고)
+cmake -S . -B build                 # XIP 로 하려면 -DAPP_RUN=XIP (한 번 주면 캐시에 남는다)
 cmake --build build -j20            # build/stm32n6-fw.bin
 
 # 내려받고 실행 — 앱이 돌고 있으면 툴이 FSBL 로 넘긴 뒤 쓴다 (VSCode 태스크 download-uart)
@@ -26,6 +26,31 @@ python3 ../stm32n6-boot/tools/download.py --target fw build/stm32n6-fw.bin
   확인     0.05s  87488 B  crc 0x12AF (호스트 0x12AF) OK
 실행     : 앱으로 점프
 ```
+
+ST-LINK 로 써도 된다 (외부 로더, [26](26-ext-loader.md)). FSBL 이 돌고 있든 앱이 돌고 있든 상관없다.
+
+```bash
+python3 ../stm32n6-boot/tools/flash.py --target fw --bin build/stm32n6-fw.bin
+```
+
+```
+TAG  : 84800 B  crc 0xD0DE  → stm32n6-fw-tag.bin
+...
+Download verified successfully
+```
+
+- `--target fw` 는 bin 의 `firm_ver_t.firm_size` 로 TAG(`firm_tag_t`, CRC-16)를 PC 에서 만들고, TAG 4 KB + 이미지를 `<이름>-tag.bin` 으로 묶어 `0x7010_0000` 에 쓴다. 서명은 하지 않는다
+- 다 쓰면 하드 리셋 → FSBL 이 TAG 를 확인하고 앱으로 간다
+
+| VSCode | 하는 일 |
+|---|---|
+| 태스크 `flash-ext` | 위 명령. 빌드는 하지 않는다 |
+| 태스크 `download-uart` / `download-uart (포트 선택)` | UART 다운로드 |
+| 런치 `Flash + Attach FW` | `flash-ext` 로 쓰고 리셋한 뒤, FSBL 이 실행한 앱에 붙는다 (attach) |
+| 런치 `Attach FW` | 지금 돌고 있는 앱에 붙기만 한다 |
+
+VSCode 에서는 `build-build` 태스크에 SRAM / XIP 입력이 붙어 있다. Firmware Task Manager 트리에서 ⚙️ 로 미리 골라 두면
+▶ 로 실행할 때 다시 묻지 않는다 (다운로드의 포트 선택과 같은 방식). 빌드 로그 첫머리에 `APP_RUN = SRAM (...sram.ld)` 처럼 찍힌다.
 
 | 프로젝트 | 내용 |
 |---|---|
@@ -113,8 +138,23 @@ fw 대상을 다 쓰면 `FW_JUMP` 로 앱을 실행한다.
 | 앱이 돌 때 `download.py --target fw` | APP 감지 → FSBL 로 → 쓰기 → 앱 |
 | 앱 `reset boot` | `stay in FSBL (boot request)`. 다시 리셋하면 앱 |
 
-XIP 는 빌드만 확인했다 (코드 87 KB 는 NOR, RAM 21 KB). 남은 일:
+### XIP
 
-- 앱의 `SystemInit()` 이 XSPI2 / XSPIM 을 리셋한다 (ST 템플릿 그대로). XIP 에서는 자기가 실행 중인 버스를 끊는다
-- 앱의 클럭 설정이 PLL1 을 바꾼다. XSPI2 커널 클럭(IC3)이 PLL1 이라 실행 중에 흔들린다
-- HSLV 퓨즈(200 MHz) 판단 ([24](24-xspi-nor.md) 2 절)
+XIP 에서 문제가 될 두 곳을 앱에서 막았다. 그 뒤로는 SRAM 과 같은 시험이 모두 통과했다.
+
+| 문제 | 왜 | 처리 |
+|---|---|---|
+| 앱 `SystemInit()` 이 XSPI2 / XSPIM 을 리셋한다 (ST 템플릿 그대로) | 지금 코드를 읽어 오는 버스를 끊는다 | `APP_RUN_XIP` 에서는 건너뛴다 |
+| 앱 `bspClockInit()` 이 PLL1 을 다시 설정한다 | XSPI2 커널 클럭(IC3)이 PLL1 이라 인출이 멈춘다 | XIP 에서는 FSBL 이 맞춘 클럭(800 MHz)을 그대로 쓰고 `SystemCoreClockUpdate()` + `HAL_InitTick()` 만 |
+
+FSBL 은 `xspiSetXipMode(true)` 로 memory-mapped 를 켜고 점프한다 (XIP 진입 전 Abort, 캐시 정리는 [24](24-xspi-nor.md) 4 절과 같다).
+기본 메모리 맵(PRIVDEFENA)에서 `0x7000_0000` 은 실행할 수 있는 영역이라 MPU 를 따로 열지 않았다.
+
+| 시험 (APP_RUN = XIP, 84800 B) | 결과 |
+|---|---|
+| SRAM 앱이 도는 상태에서 `download.py --target fw` | FSBL 로 → 쓰기 → `FW_JUMP` → `Addr 0x70101000`, `Run : XIP (external NOR)`, 800 MHz |
+| 앱 `reset reset` | FSBL → `jump : XIP 0x70101000` → 앱 |
+| 앱 `reset boot` | `stay in FSBL (boot request)` |
+| 다시 SRAM 빌드를 내려받기 | `Run : SRAM (AXISRAM1)` — 다운로드만으로 방식이 바뀐다 |
+
+남은 판단: 코드 인출이 NOR 50 MHz 다. 무거운 코드를 XIP 로 돌릴 때 HSLV 퓨즈(200 MHz)를 다시 따진다 ([24](24-xspi-nor.md) 2 절).

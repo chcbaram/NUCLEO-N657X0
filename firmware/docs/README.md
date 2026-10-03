@@ -8,7 +8,7 @@ STM32N657X0H3Q / MB1940-C02 보드 기준 펌웨어 개발 참고 문서.
 |---|---|
 | 보드 | NUCLEO-N657X0-Q (MB1940-C02), Device ID `0x486` Rev B |
 | **부트 점퍼** | **JP2(BOOT1) = 1 → Development boot.** 이 상태여야 SWD 가 붙는다 |
-| 펌웨어 | `firmware/stm32n6-boot` — FSBL 골격 + LED + **UART(VCP, DMA 수신) + 로그 + CLI + BootROM 트레이스 + 외부 NOR(XSPI2) + RTC/리셋 + Flash boot(외부 로더) + UART 다운로드** 동작 확인 · 앱 `firmware/stm32n6-fw` 를 SRAM 에서 실행 |
+| 펌웨어 | `firmware/stm32n6-boot` — FSBL 골격 + LED + **UART(VCP, DMA 수신) + 로그 + CLI + BootROM 트레이스 + 외부 NOR(XSPI2) + RTC/리셋 + Flash boot(외부 로더) + UART 다운로드** 동작 확인 · 앱 `firmware/stm32n6-fw` 를 SRAM / XIP 로 실행 |
 | 클럭 | **800 MHz overdrive** (HSI → PLL1 1600 MHz → IC1 /2, V<sub>DDCORE</sub> 0.89 V) → [22](22-cpu-800mhz.md) |
 | 빌드 | 88,720 B / 511 KB (16.96%) — arm-none-eabi-gcc 15.3.1 |
 | 툴 | CubeCLT 1.22.0 에서 필요한 것만 `~/ST` 에 추출 (Programmer 2.23.0 / gdbserver 7.14.0). 적재·SWD 확인 완료 |
@@ -41,7 +41,8 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 
 ### 다음 작업
 
-1. 앱 XIP 실행 확인 (빌드만 됨) — 앱 SystemInit 의 XSPI 리셋 / PLL1 변경 정리, HSLV 판단 → [29](29-app-split.md) 5절
+1. (판단 필요) XIP 앱을 무겁게 쓸 때 HSLV 퓨즈 / XSPI 200 MHz → [24](24-xspi-nor.md) 2절
+2. USB CDC 로 CLI / cmd (구조는 준비됨 — cmd_task 채널 표, 보율 규칙)
 
 ## 문서 번호 규칙
 
@@ -84,7 +85,7 @@ $STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hot
 | [26-flash-boot.md](26-flash-boot.md) | 서명 → 외부 로더로 NOR 기록 → Flash boot (`flash.py`, 태스크 `flash-ext`) | ✅ |
 | [27-swd-attach.md](27-swd-attach.md) | 돌고 있는 FSBL 에 디버거가 붙으면 멈추던 문제 — `SystemInit()` 의 SYSCFG 클럭 끄기 / `INITSVTORCR` | ✅ |
 | [28-uart-download.md](28-uart-download.md) | UART(CLI 포트) 로 FSBL / 앱 / 데이터 다운로드, 보율 올리기 (4 Mbps 2.5 s) | ✅ |
-| [29-app-split.md](29-app-split.md) | FSBL / 앱 분리 — stm32n6-boot + stm32n6-fw, APP_RUN = SRAM / XIP | ✅ (SRAM) |
+| [29-app-split.md](29-app-split.md) | FSBL / 앱 분리 — stm32n6-boot + stm32n6-fw, APP_RUN = SRAM / XIP | ✅ |
 
 ## 그림
 

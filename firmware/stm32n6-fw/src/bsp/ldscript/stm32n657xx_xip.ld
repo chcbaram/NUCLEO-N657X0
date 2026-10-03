@@ -10,7 +10,7 @@
                         코드, rodata, .data 초기값      ← 여기까지가 이미지 (_fw_flash_size)
     0x3400_0000  1 MB   .data, .bss, heap, stack (AXISRAM1)
 
-  [미검증] 아직 보드에서 돌려 보지 않았다. 앱 SystemInit 이 XSPI2 를 리셋하지 않게 해야 한다 (docs/29).
+  앱의 SystemInit 은 XIP 에서 XSPI2 를 리셋하지 않고, bspInit 은 PLL1 을 다시 설정하지 않는다 (docs/29).
 */
 
 ENTRY(Reset_Handler)

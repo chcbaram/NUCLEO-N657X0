@@ -5,7 +5,7 @@
 #include "bsp.h"
 
 
-#define _DEF_FIRMWATRE_VERSION    "V260826R1"
+#define _DEF_FIRMWATRE_VERSION    "V261003R1"
 #define _DEF_BOARD_NAME           "STM32N6-FW"
 
 

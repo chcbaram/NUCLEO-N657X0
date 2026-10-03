@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """
-FSBL 을 서명해서 외부 NOR(0x70000000) 에 쓰고 리셋한다. (macOS / Linux / Windows)
+FSBL 이나 앱을 ST-LINK(외부 로더) 로 외부 NOR 에 쓰고 리셋한다. (macOS / Linux / Windows)
+
+  대상 (--target)
+    boot : FSBL. 서명본(-trusted.bin)을 0x70000000 (FSBL1) 에 쓴다
+    fw   : 앱. TAG 섹터(4 KB)를 PC 에서 계산해 이미지 앞에 붙이고 0x70100000 에 쓴다.
+           UART 다운로드에서는 FSBL 이 TAG 를 쓰지만, ST-LINK 로 쓸 때는 이 스크립트가 같은 형식으로 만든다
+           (TAG 가 없으면 FSBL 이 앱을 실행하지 않는다)
 
   부팅 : JP1(BOOT0) = 0, JP2(BOOT1) = 0  -> Flash boot
          쓰기 자체는 JP2 = 1 (Development boot) 에서도 된다.
@@ -12,20 +18,32 @@ FSBL 을 서명해서 외부 NOR(0x70000000) 에 쓰고 리셋한다. (macOS / L
   CubeCLT 경로 : $CLT -> ~/ST/STM32CubeCLT(_*) -> /opt/ST/STM32CubeCLT(_*) -> C:/ST/STM32CubeCLT(_*)
   표준 라이브러리만 쓴다.
 
-  사용 : python3 tools/flash.py [--bin <bin>] [--loader <stldr>] [--addr <주소>] [--no-reset]
-         인자가 없으면 이 프로젝트(build/stm32n6-boot-trusted.bin) 와 이 저장소의 외부 로더를 쓴다.
+  사용 : python3 tools/flash.py [--target boot|fw] [--bin <bin>] [--loader <stldr>] [--addr <주소>] [--no-reset]
+         boot 기본: build/stm32n6-boot-trusted.bin, fw 기본: ../stm32n6-fw/build/stm32n6-fw.bin
 """
 import argparse
 import glob
 import os
 import re
+import struct
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from cmdproto import crc16   # noqa: E402  (펌웨어 utilCalcCRC 와 같은 CRC-16)
 
 IS_WIN   = os.name == "nt"
 EXE      = ".exe" if IS_WIN else ""
 PRJ_DIR  = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DEF_BIN  = os.path.join(PRJ_DIR, "build", "stm32n6-boot-trusted.bin")
+DEF_FW   = os.path.abspath(os.path.join(PRJ_DIR, "..", "stm32n6-fw", "build", "stm32n6-fw.bin"))
+ADDR     = {"boot": "0x70000000", "fw": "0x70100000"}
+
+TAG_SIZE      = 0x1000              # FLASH_SIZE_TAG
+TAG_MAGIC     = 0x54414720          # "TAG "
+VER_MAGIC     = 0x56455220          # "VER "
+VER_OFFSET    = 0x400               # 이미지 안 firm_ver_t 위치
+VER_SIZE_OFF  = VER_OFFSET + 4 + 32 + 32 + 4   # firm_ver_t.firm_size
 LDR_DIR  = os.path.abspath(os.path.join(PRJ_DIR, "..", "stm32n6-ext-loader"))
 DEF_LDR  = os.path.join(LDR_DIR, "build", "MX25UM51245G_NUCLEO-N657X0.stldr")
 ANSI     = re.compile(r"\x1b\[[0-9;]*m")
@@ -57,11 +75,37 @@ def run(args):
   return p.returncode, ANSI.sub("", p.stdout.decode(errors="replace"))
 
 
+def make_tagged(bin_path):
+  """앱 bin 앞에 TAG 섹터를 붙인 <이름>-tag.bin 을 만든다. FSBL 의 cmdBootEndFw() 와 같은 형식이다.
+
+  firm_tag_t { magic "TAG ", fw_addr = TAG 크기, fw_size, fw_crc (CRC-16), tag_crc (앞 16 바이트의 CRC-16) }
+  fw_size 는 이미지의 firm_ver_t.firm_size 를 우선한다 (bin 끝 패딩이 있어도 stale tag 가 되지 않게).
+  """
+  image = open(bin_path, "rb").read()
+  size  = len(image)
+  if len(image) >= VER_SIZE_OFF + 4:
+    magic, = struct.unpack_from("<I", image, VER_OFFSET)
+    firm_size, = struct.unpack_from("<I", image, VER_SIZE_OFF)
+    if magic == VER_MAGIC and 0 < firm_size <= len(image):
+      size = firm_size
+    else:
+      print("경고: firm_ver_t 가 없다. bin 크기로 TAG 를 만든다")
+
+  head = struct.pack("<4I", TAG_MAGIC, TAG_SIZE, size, crc16(image[:size]))
+  tag  = head + struct.pack("<I", crc16(head))
+  out  = os.path.splitext(bin_path)[0] + "-tag.bin"
+  with open(out, "wb") as f:
+    f.write(tag + b"\xFF" * (TAG_SIZE - len(tag)) + image)
+  print(f"TAG  : {size} B  crc 0x{crc16(image[:size]):04X}  → {os.path.basename(out)}")
+  return out
+
+
 def parse_args():
-  ap = argparse.ArgumentParser(description="FSBL 서명 → 외부 NOR 기록 → 리셋")
-  ap.add_argument("--bin",    default=DEF_BIN, help="기록할 bin. 서명돼 있지 않으면 서명한다 (기본: %(default)s)")
+  ap = argparse.ArgumentParser(description="ST-LINK(외부 로더) 로 FSBL / 앱 기록 → 리셋")
+  ap.add_argument("--target", choices=["boot", "fw"], default="boot", help="boot = FSBL, fw = 앱 (기본: boot)")
+  ap.add_argument("--bin",    help="기록할 bin (boot: build/stm32n6-boot-trusted.bin, fw: ../stm32n6-fw/build/stm32n6-fw.bin)")
   ap.add_argument("--loader", default=DEF_LDR, help="외부 로더 .stldr (기본: 이 저장소의 로더, 없으면 빌드)")
-  ap.add_argument("--addr",   default="0x70000000", help="기록 주소 (기본: %(default)s, FSBL1 자리)")
+  ap.add_argument("--addr",   help="기록 주소 (boot: 0x70000000 FSBL1, fw: 0x70100000 TAG 섹터)")
   ap.add_argument("--no-reset", action="store_true", help="기록 뒤 리셋하지 않는다")
   return ap.parse_args()
 
@@ -71,7 +115,8 @@ def main():
   sys.stdout.reconfigure(line_buffering=True)
 
   args = parse_args()
-  BIN  = os.path.abspath(args.bin)
+  BIN  = os.path.abspath(args.bin or (DEF_FW if args.target == "fw" else DEF_BIN))
+  args.addr = args.addr or ADDR[args.target]
   LDR  = os.path.abspath(args.loader)
 
   clt = find_clt()
@@ -106,7 +151,9 @@ def main():
   with open(BIN, "rb") as f:
     signed = f.read(4) == b"STM2"
 
-  if signed:
+  if args.target == "fw":
+    OUT = make_tagged(BIN)      # 앱은 서명하지 않는다 (BootROM 이 읽지 않는다)
+  elif signed:
     OUT = BIN
   else:
     OUT = os.path.splitext(BIN)[0] + "-trusted.bin"

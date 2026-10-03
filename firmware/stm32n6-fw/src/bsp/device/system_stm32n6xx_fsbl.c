@@ -249,9 +249,13 @@ void SystemInit(void)
   (void) RCC->APB4ENR2;
   RCC->APB4ENR2 &= ~(0x00000010UL);
 
+#if !defined(APP_RUN_XIP)
   /* XSPI2 & XSPIM reset                                  */
   RCC->AHB5RSTSR = RCC_AHB5RSTSR_XSPIMRSTS | RCC_AHB5RSTSR_XSPI2RSTS;
   RCC->AHB5RSTCR = RCC_AHB5RSTCR_XSPIMRSTC | RCC_AHB5RSTCR_XSPI2RSTC;
+#else
+  /* XIP 앱은 XSPI2 를 리셋하지 않는다. 지금 이 코드를 읽어 오는 버스다 (FSBL 이 memory-mapped 로 넘겨준다) */
+#endif
 
   /* TIM2 reset */
   RCC->APB1RSTSR1 = RCC_APB1RSTSR1_TIM2RSTS;
