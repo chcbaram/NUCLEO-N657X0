@@ -51,7 +51,7 @@ STM32N6 뿐 아니라 **부트로더 + 앱 구조를 직접 설계할 때 참고
 
 ## 빠르게 시작하기
 
-준비물: CMake, arm-none-eabi-gcc, Python 3, STM32CubeCLT (Programmer / ST-LINK gdbserver). 자세한 설정은 [10-dev-environment.md](firmware/docs/10-dev-environment.md) 에 있습니다.
+아래 [사용한 툴](#사용한-툴) 을 먼저 준비합니다.
 
 ```bash
 # FSBL 빌드 → ST-LINK 로 NOR 에 기록 (외부 로더 사용)
@@ -68,6 +68,30 @@ python3 ../stm32n6-boot/tools/download.py --target fw build/stm32n6-fw.bin
 - 보드 단독 부팅은 Flash boot 점퍼(JP1 = 0, JP2 = 0), 개발 중 SRAM 적재는 Development boot(JP2 = 1) 입니다 ([03](firmware/docs/03-board-boot-mapping.md))
 - VSCode 에는 빌드 / ST-LINK 쓰기 / UART 다운로드 태스크와 디버그 구성(Flash + Attach)이 들어 있습니다
 - 시리얼 터미널은 ST-LINK VCP 115200 bps 입니다. 부팅 로그 뒤 `cli#` 에서 `help` 로 명령을 볼 수 있습니다
+
+## 사용한 툴
+
+이 저장소의 빌드와 검증은 아래 버전으로 했습니다 (macOS 27 / Apple Silicon). 자세한 설치와 경로 규칙은 [10-dev-environment.md](firmware/docs/10-dev-environment.md) 에 있습니다.
+
+| 툴 | 버전 | 용도 |
+|---|---|---|
+| Arm GNU Toolchain (`arm-none-eabi-gcc`) | 15.3.1 (15.3.Rel1) | 컴파일러 · 링커 |
+| CMake | 4.4.3 | 빌드 구성 |
+| GNU Make | 3.81 | 빌드 (CMake 기본 생성기) |
+| STM32CubeCLT | 1.22.0 | 아래 ST 툴 묶음. 필요한 것만 추출해서 쓴다 |
+| └ STM32CubeProgrammer (`STM32_Programmer_CLI`) | 2.23.0 | ST-LINK 로 NOR 기록 (외부 로더) |
+| └ STM32 Signing Tool (`STM32_SigningTool_CLI`) | 2.23.0 | FSBL 이미지 헤더 / 서명 |
+| └ ST-LINK gdbserver | 7.14.0 | 디버깅 |
+| ST-LINK 펌웨어 (보드 내장 STLINK-V3) | V3J17M10 | |
+| STM32N6xx HAL / CMSIS Device | 1.4.0 / 1.4.0 | [STM32CubeN6](https://github.com/STMicroelectronics/STM32CubeN6) 에서 가져옴 |
+| Python | 3.9.6 | `flash.py` / `download.py` (표준 라이브러리) |
+| pyserial | 3.5 | `download.py` UART 다운로드 |
+| VSCode | 1.139.1 | 편집 · 태스크 · 디버그 |
+| └ Cortex-Debug (`marus25.cortex-debug`) | 1.12.1 | ST-LINK gdbserver 디버깅 |
+| └ C/C++ (`ms-vscode.cpptools`) | 1.34.4 | IntelliSense |
+| └ Firmware Task Manager (`baram-dev.firmware-task-manager`) | 1.1.4 | 태스크 트리, 시리얼 포트 선택 |
+
+Windows 에서는 같은 툴의 Windows 판(CubeCLT 는 설치 프로그램)을 쓰고, 태스크는 `python` 으로 실행됩니다.
 
 ## 문서
 
