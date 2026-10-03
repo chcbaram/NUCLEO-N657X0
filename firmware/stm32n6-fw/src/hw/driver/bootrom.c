@@ -123,7 +123,8 @@ bool bootromInit(void)
 
 
   bootromSummary(buf, sizeof(buf));
-  logPrintf("Booting..ROM  \t\t: %s\r\n", buf);
+  logPrintf("[OK] bootromInit()\n");
+  logPrintf("     %s\n", buf);
 
 #if CLI_USE(HW_BOOTROM)
   cliAdd("bootrom", cliCmd);

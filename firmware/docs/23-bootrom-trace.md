@@ -1,6 +1,6 @@
 # 23. BootROM 트레이스 파서
 
-> BootROM 이 부팅하면서 AXISRAM2 에 남긴 바이너리 트레이스를 FSBL 에서 읽어 **부팅 배너에 한 줄 요약**,
+> BootROM 이 부팅하면서 AXISRAM2 에 남긴 바이너리 트레이스를 FSBL 에서 읽어 **부팅 로그에 한 줄 요약**,
 > CLI `bootrom trace` 로 **전체 목록**을 출력한다. Flash boot 로 넘어가면 "왜 FSBL 이 안 뜨는지"를
 > 알아낼 거의 유일한 수단이 된다.
 > 관련: [02-fsbl-loading.md](02-fsbl-loading.md) 9절 (트레이스 포맷과 상태 워드)
@@ -10,8 +10,12 @@
 ## 1. 결과
 
 ```
-Booting..ROM  		: v0x501 DevBoot ClosedUnlocked reset=Sft traces=20 err=0
+[OK] bootromInit()
+     v0x501 DevBoot ClosedUnlocked reset=Sft traces=20 err=0
 ```
+
+다른 프로젝트들과 같이 배너(`Booting..`)를 찍은 뒤 `hwInit()` 끝에서 초기화하고, `[OK] xxxInit()` + 들여쓴
+세부 줄 형식으로 찍는다.
 
 | 항목 | 값 | 뜻 |
 |---|---|---|
@@ -105,14 +109,14 @@ ST 파일의 1247 줄 중 약 950 줄은 코드 → 이름 표(230 개)다. 우�
 | `src/hw/driver/bootrom.c` | 파서, 이름 표, 요약, CLI `bootrom` |
 | `src/common/hw/include/bootrom.h` | `bootromInit()`, `bootromPrintTrace()` |
 | `src/hw/hw_def.h` | `_USE_HW_BOOTROM`, `_USE_CLI_HW_BOOTROM` |
-| `src/hw/hw.c` | 배너 끝에서 `bootromInit()` |
+| `src/hw/hw.c` | 배너 뒤 `hwInit()` 끝에서 `bootromInit()` |
 
 파서는 START 를 찾아 size 를 읽고, size 가 12 미만이거나 4 의 배수가 아니거나 버퍼 끝을 넘으면
 그 버퍼의 파싱을 멈춘다. RAM 은 3.8 KB 늘었다 (88.9 → 92.7 KB).
 
 | CLI | 내용 |
 |---|---|
-| `bootrom info` | 배너와 같은 요약 |
+| `bootrom info` | 초기화 로그와 같은 요약 |
 | `bootrom trace` | 전체 목록 (secure + non-secure, 타임스탬프 순) |
 
 ---

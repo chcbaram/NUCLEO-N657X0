@@ -1,4 +1,5 @@
 #include "otp.h"
+#include "log.h"
 #include "cli.h"
 
 
@@ -33,6 +34,8 @@ bool otpInit(void)
 #if CLI_USE(HW_OTP)
   cliAdd("otp", cliCmd);
 #endif
+
+  logPrintf("[OK] otpInit()\n");
   return true;
 }
 
