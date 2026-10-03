@@ -35,7 +35,7 @@ extern "C" {
   */
 #define HAL_MODULE_ENABLED
 /*#define HAL_ADC_MODULE_ENABLED   */
-/* #define HAL_BSEC_MODULE_ENABLED */
+#define HAL_BSEC_MODULE_ENABLED
 /*#define HAL_CRC_MODULE_ENABLED   */
 /*#define HAL_CRYP_MODULE_ENABLED   */
 /*#define HAL_DCMI_MODULE_ENABLED   */
@@ -69,7 +69,7 @@ extern "C" {
 /*#define HAL_RAMCFG_MODULE_ENABLED   */
 /*#define HAL_RIF_MODULE_ENABLED   */
 /*#define HAL_RNG_MODULE_ENABLED   */
-/*#define HAL_RTC_MODULE_ENABLED   */
+#define HAL_RTC_MODULE_ENABLED
 /*#define HAL_SAI_MODULE_ENABLED   */
 /*#define HAL_SD_MODULE_ENABLED   */
 /*#define HAL_SDIO_MODULE_ENABLED   */
@@ -80,10 +80,10 @@ extern "C" {
 /*#define HAL_SPI_MODULE_ENABLED   */
 /*#define HAL_SRAM_MODULE_ENABLED   */
 /*#define HAL_TIM_MODULE_ENABLED   */
-/*#define HAL_UART_MODULE_ENABLED   */
+#define HAL_UART_MODULE_ENABLED
 /*#define HAL_USART_MODULE_ENABLED   */
 /*#define HAL_WWDG_MODULE_ENABLED   */
-/* #define HAL_XSPI_MODULE_ENABLED */
+#define HAL_XSPI_MODULE_ENABLED
 /*#define HAL_CACHEAXI_MODULE_ENABLED   */
 /*#define HAL_MDIOS_MODULE_ENABLED   */
 /*#define HAL_GPU2D_MODULE_ENABLED   */

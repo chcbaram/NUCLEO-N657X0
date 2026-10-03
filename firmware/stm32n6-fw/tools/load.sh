@@ -11,10 +11,38 @@
 #
 set -e
 
-#   gdbserver 7.13.0 은 ST-LINK 펌웨어 V3J17M10 이상을 요구한다.
-#   업그레이드: /opt/ST/STM32CubeCLT_1.21.0/STLinkUpgrade.sh
+# CubeCLT 경로. 버전을 박아두지 않는다.
 #
-CLT=${CLT:-/opt/ST/STM32CubeCLT_1.21.0}
+#   이 맥에는 pkg 를 정식 설치하지 않고, 필요한 것만 추출해서
+#   ~/ST/STM32CubeCLT_<버전> 에 두고 ~/ST/STM32CubeCLT 링크로 참조한다.
+#   (gcc / cmake / make / ninja 는 이미 있는 것을 쓰므로 뺐다)
+#
+#   탐색 순서 : $CLT -> ~/ST 링크 -> ~/ST 최신 -> /opt/ST 링크 -> /opt/ST 최신
+#
+#   gdbserver 는 구형 ST-LINK 펌웨어를 거부한다.
+#   거부당하면 "$CLT/STLinkUpgrade.sh" 로 올린다. (번들 jre 필요)
+#
+if [ -z "${CLT:-}" ]; then
+  for cand in \
+    "$HOME/ST/STM32CubeCLT" \
+    "$(ls -d "$HOME"/ST/STM32CubeCLT_* 2>/dev/null | sort -V | tail -1 || true)" \
+    "/opt/ST/STM32CubeCLT" \
+    "$(ls -d /opt/ST/STM32CubeCLT_* 2>/dev/null | sort -V | tail -1 || true)"
+  do
+    if [ -n "$cand" ] && [ -x "$cand/STLink-gdb-server/bin/ST-LINK_gdbserver" ]; then
+      CLT="$cand"
+      break
+    fi
+  done
+fi
+
+if [ -z "${CLT:-}" ] || [ ! -x "$CLT/STLink-gdb-server/bin/ST-LINK_gdbserver" ]; then
+  echo "CubeCLT 를 찾지 못했다. 아래 중 하나를 해 둘 것:"
+  echo "  ~/ST/STM32CubeCLT  링크를 만든다 (10-dev-environment.md 4절)"
+  echo "  CLT=<경로> ./tools/load.sh"
+  exit 1
+fi
+echo "CubeCLT : $CLT"
 
 PRJ_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ELF="$PRJ_DIR/build/stm32n6-fw.elf"
@@ -22,8 +50,13 @@ GDB_PORT=${GDB_PORT:-61234}
 
 [ -f "$ELF" ] || { echo "elf 가 없다: $ELF  (먼저 빌드할 것)"; exit 1; }
 
+# VSCode 의 cortex-debug launch 와 같은 옵션으로 띄운다 (-d = --swd, --halt, -m 1).
+#
+#   리셋하고 BootROM 에서 세운 뒤 적재하므로 앞 펌웨어의 상태가 남지 않는다.
+#   (돌고 있는 펌웨어에 붙으면 보드가 멈추던 문제는 SystemInit() 에서 고쳤다 -> docs/27-swd-attach.md)
+#
 "$CLT/STLink-gdb-server/bin/ST-LINK_gdbserver" \
-  -p "$GDB_PORT" -l 1 -m 1 -k -e -d --attach \
+  -p "$GDB_PORT" -l 1 -d --halt -m 1 \
   -cp "$CLT/STM32CubeProgrammer/bin" > /tmp/stm32n6-gdbserver.log 2>&1 &
 SRV_PID=$!
 trap 'kill $SRV_PID 2>/dev/null || true' EXIT

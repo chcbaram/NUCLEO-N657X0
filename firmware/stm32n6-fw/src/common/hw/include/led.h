@@ -8,6 +8,7 @@ extern "C" {
 #include "hw_def.h"
 
 #ifdef _USE_HW_LED
+
 #define LED_MAX_CH  HW_LED_MAX_CH
 
 

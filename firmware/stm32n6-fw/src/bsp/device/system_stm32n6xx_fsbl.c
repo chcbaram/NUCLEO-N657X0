@@ -219,8 +219,9 @@ void SystemInit(void)
   /* Delay after an RCC peripheral clock enabling */
   (void)RCC->APB4ENR2;
 
-  /* Set default Vector Table location after system reset or return from Standby */
-  SYSCFG->INITSVTORCR = SCB->VTOR;
+  /* INITSVTORCR 는 바꾸지 않는다 (BootROM 0x18000000 그대로).
+     RAM 의 FSBL 을 가리키게 하면 디버거가 건 리셋이 BootROM 을 건너뛰어 보드가 멈춘다
+     (docs/27-swd-attach.md). ST 템플릿은 Standby 복귀용으로 쓰지만 이 프로젝트는 Standby 를 쓰지 않는다. */
 
   /* Compensation cells setting according to Errata Sheet ES0620 */
   /* a/ Enable access and configuration of VDDIOxCCCR registers  */
@@ -261,10 +262,9 @@ void SystemInit(void)
   /* Deactivate GPIOG clock */
   RCC->AHB4ENCR = RCC_AHB4ENCR_GPIOGENC;
 
-  /* Read back the value to make sure it is written before deactivating SYSCFG */
-  (void) SYSCFG->INITSVTORCR;
-  /* Deactivate SYSCFG clock */
-  RCC->APB4ENCR2 = RCC_APB4ENCR2_SYSCFGENC;
+  /* SYSCFG 클럭은 끄지 않는다.
+     꺼 두면 돌고 있는 코어에 디버거가 붙는 순간 보드가 멈추고, 전원을 다시 넣어야 풀린다
+     (docs/27-swd-attach.md). ST 템플릿은 여기서 끈다. */
 
 #if defined(USER_TZ_SAU_SETUP)
   /* SAU/IDAU, FPU and Interrupts secure/non-secure allocation settings */

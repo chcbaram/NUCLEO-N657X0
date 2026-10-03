@@ -8,9 +8,14 @@
       "problemMatcher": []
     },
     {
+      // -j20 고정. 호스트가 18 코어라 그걸 덮는 값이면 충분하고, OS 별로 코어 수를
+      //   세는 분기가 없어서 Windows 와 명령이 같아진다.
+      //   숫자 없는 -j 는 "준비된 타깃 전부" 라서 쓰지 않는다 (10-dev-environment.md 3절).
+      // configure 는 dependsOn 으로 분리한다. && 는 PowerShell 5.1 에서 안 통한다.
       "label": "build-build",
       "type": "shell",
-      "command": "cmake -S . -B build && cmake --build build -j8",
+      "command": "cmake --build build -j20",
+      "dependsOn": "build-configure",
       "problemMatcher": ["$gcc"],
       "group": { "kind": "build", "isDefault": true }
     },
@@ -21,9 +26,20 @@
       "problemMatcher": []
     },
     {
+      // macOS / Linux 전용. Windows 에서는 cortex-debug 런치 구성으로 적재한다.
       "label": "load-sram",
       "type": "shell",
       "command": "./tools/load.sh",
+      "problemMatcher": [],
+      "dependsOn": "build-build"
+    },
+    {
+      // 서명 → 외부 로더로 외부 NOR 기록 → 리셋 (docs/26-flash-boot.md)
+      //   Flash boot / Development boot 모두에서 돌고 있는 FSBL 위에 쓴다.
+      "label": "flash-ext",
+      "type": "shell",
+      "command": "python3 tools/flash.py",
+      "windows": { "command": "python tools/flash.py" },
       "problemMatcher": [],
       "dependsOn": "build-build"
     }

@@ -15,7 +15,7 @@ typedef struct
 static const led_tbl_t led_tbl[LED_MAX_CH] =
 {
   {GPIOG, GPIO_PIN_8,  GPIO_PIN_RESET, GPIO_PIN_SET},   // LD7 BLUE
-  {GPIOG, GPIO_PIN_10, GPIO_PIN_RESET, GPIO_PIN_SET},   // LD5 RED
+  {GPIOG, GPIO_PIN_10, GPIO_PIN_RESET, GPIO_PIN_SET},   // LD5 RED   (BootROM 실패 로그 UART5_TX 와 공유)
   {GPIOG, GPIO_PIN_0,  GPIO_PIN_RESET, GPIO_PIN_SET},   // LD6 GREEN
 };
 

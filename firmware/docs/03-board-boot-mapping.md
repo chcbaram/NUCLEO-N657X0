@@ -201,7 +201,7 @@ debug authentication 이 필요하다 (RM0486 §3.9, §4.3.11).
 
 | OTP | 이유 |
 |---|---|
-| `VDDIO3_HSLV = 1` | 외장 플래시 전송속도 최대화 (CubeN6 README 권고) |
+| `VDDIO3_HSLV = 1` | 외장 플래시 전송속도 최대화 (CubeN6 README 권고). **이 프로젝트는 태우지 않고 50 MHz 로 간다** → [24](24-xspi-nor.md) 2절 |
 | `OTP11[30] xspi_3v3 = 0` | 보드 플래시가 1.8 V |
 | `OTP16[13:11] = 0b110` | HSE 48 MHz 고정 (자동검출 시간 절약) |
 

@@ -24,7 +24,7 @@ firmware/stm32n6-fw/
 ├── .gitignore
 ├── .vscode/
 │   ├── tasks.json                build / load 태스크
-│   ├── launch.json               cortex-debug (CubeCLT 1.21.0)
+│   ├── launch.json               cortex-debug (CubeCLT, 버전 없는 경로)
 │   └── c_cpp_properties.json
 ├── tools/
 │   ├── arm-none-eabi-gcc.cmake   툴체인 정의 (참조 프로젝트에서 그대로)
@@ -182,7 +182,7 @@ C5(M33) 프로젝트에서 바뀐 부분은 [10-dev-environment.md](10-dev-envir
 cd firmware/stm32n6-fw
 
 # 빌드
-cmake -S . -B build && cmake --build build -j8
+cmake -S . -B build && cmake --build build -j20
 
 # SRAM 적재 + 실행
 ./tools/load.sh
@@ -202,8 +202,27 @@ STM32_Programmer_CLI -c port=SWD ap=1 mode=Hotplug -w build/stm32n6-fw.elf -s 0x
 적재해 둔 이미지의 실행이 멈춘다. 실제로 적재 직후 GPIO 레지스터를 읽어 확인하려 했더니
 BootROM 이 남긴 값(PG10 open-drain)만 보였다.
 
-그래서 `tools/load.sh` 는 **ST-LINK gdbserver + arm-none-eabi-gdb** 로,
-리셋 없이 `load` 한 뒤 벡터테이블에서 SP/PC 를 직접 세팅하는 방식을 쓴다.
+문제는 **적재한 뒤에** 리셋되는 것이다. 그래서 `tools/load.sh` 는 **ST-LINK gdbserver +
+arm-none-eabi-gdb** 로 붙어 `load` 한 뒤, 벡터테이블에서 SP/PC 를 직접 세팅하고 리셋 없이 놓는다.
+
+#### gdbserver 는 launch 방식으로 띄운다 (`--attach` 쓰지 않음)
+
+```bash
+ST-LINK_gdbserver -p 61234 -l 1 -d --halt -m 1 -cp <CubeProgrammer/bin>
+```
+
+VSCode cortex-debug 의 launch 와 같은 옵션이다. 붙는 순간 **리셋하고 BootROM 에서 세운다.**
+그래서 이전 펌웨어의 상태를 하나도 물려받지 않고, **적재보다 먼저** 리셋되니 위 문제와도 무관하다.
+
+| 붙은 직후 | 예전 `-k --attach` | **지금 launch (`--halt`)** |
+|---|---|---|
+| PC | 돌던 펌웨어 안 (`uartAvailable`) | **BootROM (`0x1800_3A1A`)** |
+| `CCR` (캐시) | `0x30201` — I/D 캐시 켜짐 | `0x201` — 꺼짐 |
+| `MPU_CTRL` | `0x5` — 이전 설정 살아 있음 | `0x4` — 꺼짐 |
+
+예전 `-k --attach` 는 이름과 달리 리셋하지 않고 돌고 있는 코어에 그대로 붙었는데, UART 를 붙인
+뒤로 **가끔 그 순간 보드가 멈춰 전원 재인가가 필요했다** ([21](21-uart-cli.md) 10절).
+VSCode launch 로는 한 번도 그런 일이 없었다는 관찰에서 옵션 차이를 찾았다.
 
 ```gdb
 load
@@ -212,18 +231,45 @@ set $pc = *(unsigned int*)0x34180404
 detach
 ```
 
-### 툴 버전은 CubeCLT 1.21.0 으로 통일한다
+### CubeCLT 경로에는 버전을 박지 않는다
 
-| 도구 | 버전 |
+처음에는 여러 버전을 섞어 두고 `1.21.0` 으로 고정했다 (1.22.0 이 Qt6 때문에 macOS 12 에서
+실행되지 않아서였다). **호스트를 macOS 27 로 올려 그 제약이 없어졌으므로 최신 하나만 쓴다.**
+
+게다가 pkg 는 3.3 GB 인데 쓰는 것은 225 MB 뿐이다 (gcc / cmake / make / ninja 가 전부
+이미 있는 것과 중복). 그래서 **macOS 에서는 pkg 를 설치하지 않고 필요한 것만
+`~/ST` 에 추출해서 버전 없는 링크로 참조한다.** 추출 방법은
+[10-dev-environment.md](10-dev-environment.md#4-st-툴체인--pkg-를-설치하지-않고-필요한-것만-쓴다) 참고.
+
+```bash
+ln -sfn ~/ST/STM32CubeCLT_<버전> ~/ST/STM32CubeCLT      # sudo 불필요
+```
+
+| 참조하는 곳 | 어떻게 찾는가 |
 |---|---|
-| `STM32_Programmer_CLI` / `STM32_SigningTool_CLI` / SVD | **1.21.0** (2.22.0) |
-| `ST-LINK_gdbserver` | **1.21.0** (7.13.0) |
+| `tools/load.sh` | `$CLT` → `~/ST` 링크 → `~/ST` 최신 → `/opt/ST` 링크 → `/opt/ST` 최신 (자동) |
+| `.vscode/launch.json` | `${userHome}/ST/STM32CubeCLT/...` (JSON 이라 글롭 불가 → **링크 필요**) |
 
-1.22.0 은 Qt6 가 macOS 13+ 를 요구해서 이 호스트에서 실행되지 않는다. 그래서 1.21.0 이 상한이다.
+Windows 는 설치 프로그램으로 `C:\ST\STM32CubeCLT_<버전>` 에 설치해서 쓴다.
+
+#### ⚠️ make 도 같은 함정이 있다
+
+CubeCLT 는 자기 `Make/bin/make` 를 PATH 에 올린다. CMake 가 그걸 잡으면
+`CMakeCache.txt` 에 `/opt/ST/STM32CubeCLT_<버전>/Make/bin/make` 가 박히고,
+CubeCLT 를 갈아끼운 순간 빌드가 깨진다.
+
+```
+CMake Error: Generator: build tool execution failed,
+command was: /opt/ST/STM32CubeCLT_1.22.0/Make/bin/make -f Makefile -j8
+```
+
+재구성해도 캐시된 값이 그대로 쓰이므로 안 풀린다. `rm -rf build` 가 필요하다.
+재발을 막으려고 `tools/arm-none-eabi-gcc.cmake` 의 탐색 힌트에 `/usr/bin` 을 먼저 넣어
+시스템 make 를 잡게 했다.
 
 #### ST-LINK 펌웨어 요구사항
 
-gdbserver 7.13.0 은 구형 ST-LINK 펌웨어를 거부한다.
+gdbserver 는 구형 ST-LINK 펌웨어를 거부한다.
 
 ```
 Error in initializing ST-LINK device.
@@ -233,13 +279,14 @@ Reason: ST-LINK firmware upgrade required.
 보드 출고 펌웨어가 `V3J15M6` 이었고, 아래로 **`V3J17M10`** 까지 올려서 해결했다.
 
 ```bash
-/opt/ST/STM32CubeCLT_1.21.0/STLinkUpgrade.sh
+$STM32CLT/STLinkUpgrade.sh      # 번들 jre 필요
 #   Firmware version detected: V3J15M6
 #   Upgrade is successful.
 #   Version read: V3.J17.M10.B0.S0.P0
 ```
 
 업그레이드 후 `-c port=SWD ap=1 mode=Hotplug` 연결, gdb 적재, LED 토글까지 재확인했다.
+최신 gdbserver 가 `V3J17M10` 마저 거부하면 같은 스크립트로 한 번 더 올린다.
 
 ---
 
@@ -262,10 +309,15 @@ UART 를 붙이는 단계에서 로그/CLI 부터 순서대로 올린다.
 
 ## 8. 현재 빌드 크기
 
+arm-none-eabi-gcc 15.3.1 / 2026-10-01 재빌드 기준.
+
 ```
 Memory region     Used Size  Region Size  %age Used
          RAM:       15456 B       511 KB      2.95%
 
    text    data     bss     dec
-  12820      20    2596   15436
+  12812      20    2596   15428
 ```
+
+> gcc 14.2 로 빌드했을 때는 `text 12820 / dec 15436` 이었다. 8 B 차이는 컴파일러
+> 버전 차이일 뿐이고 링커 리전 사용량은 같다.

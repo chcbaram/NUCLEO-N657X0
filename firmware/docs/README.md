@@ -2,41 +2,47 @@
 
 STM32N657X0H3Q / MB1940-C02 보드 기준 펌웨어 개발 참고 문서.
 
-## 현재 상태 (2026-08-26)
+## 현재 상태 (2026-10-03)
 
 | | |
 |---|---|
 | 보드 | NUCLEO-N657X0-Q (MB1940-C02), Device ID `0x486` Rev B |
 | **부트 점퍼** | **JP2(BOOT1) = 1 → Development boot.** 이 상태여야 SWD 가 붙는다 |
-| 펌웨어 | `firmware/stm32n6-fw` — FSBL 골격 + LED 블링크 동작 확인 |
-| 클럭 | 600 MHz (HSI → PLL1 1200 MHz → IC1 /2) |
-| 빌드 | 15,456 B / 511 KB (2.95%) |
+| 펌웨어 | `firmware/stm32n6-fw` — FSBL 골격 + LED + **UART(VCP, DMA 수신) + 로그 + CLI + BootROM 트레이스 + 외부 NOR(XSPI2) + RTC/리셋 + Flash boot(외부 로더)** 동작 확인 |
+| 클럭 | **800 MHz overdrive** (HSI → PLL1 1600 MHz → IC1 /2, V<sub>DDCORE</sub> 0.89 V) → [22](22-cpu-800mhz.md) |
+| 빌드 | 88,720 B / 511 KB (16.96%) — arm-none-eabi-gcc 15.3.1 |
+| 툴 | CubeCLT 1.22.0 에서 필요한 것만 `~/ST` 에 추출 (Programmer 2.23.0 / gdbserver 7.14.0). 적재·SWD 확인 완료 |
 
 ### 바로 다시 시작하기
 
 ```bash
 cd firmware/stm32n6-fw
-cmake -S . -B build && cmake --build build -j8
-./tools/load.sh                       # SRAM 적재 후 실행 (LD7 파란색 500ms 점멸)
+cmake -S . -B build && cmake --build build -j20
+./tools/load.sh                       # SRAM 적재 후 실행 (LD7 500ms 점멸 + VCP 115200 부팅 배너 + cli#)
 ```
 
 연결이 안 되면 **JP2(BOOT1)가 1 쪽(pin 2-3)인지** 먼저 확인한다.
+`load.sh` 는 VSCode launch 와 같은 방식(붙기 전에 리셋)으로 적재한다. 그래도 `Target unknown error 32` 로
+실패하면 **USB 를 뽑았다 꽂은 뒤** 다시 한다 ([21](21-uart-cli.md) 10절).
 
 ```bash
-/opt/ST/STM32CubeCLT_1.21.0/STM32CubeProgrammer/bin/STM32_Programmer_CLI \
-  -c port=SWD ap=1 mode=Hotplug
+export STM32CLT=~/ST/STM32CubeCLT
+$STM32CLT/STM32CubeProgrammer/bin/STM32_Programmer_CLI -c port=SWD ap=1 mode=Hotplug
 ```
+
+> CubeCLT 는 **pkg 를 설치하지 않는다.** 3.3 GB 중 쓰는 것은 225 MB 뿐이고,
+> 설치하면 `/etc/paths` 맨 앞을 차지해 Homebrew gcc/cmake 를 가린다.
+> 필요한 것만 `~/ST` 에 추출하고 버전 없는 링크로 참조한다 →
+> [10-dev-environment.md](10-dev-environment.md#4-st-툴체인--pkg-를-설치하지-않고-필요한-것만-쓴다)
+>
+> ```bash
+> ln -sfn ~/ST/STM32CubeCLT_<버전> ~/ST/STM32CubeCLT
+> ```
 
 ### 다음 작업
 
-1. **UART** — VCP(USART1, PE5/PE6) + `logPrintf` + 부팅 배너
-   - `hal_conf.h` 에 `HAL_UART_MODULE_ENABLED` 를 켜고 `CMakeLists.txt` 의 HAL 목록에
-     `stm32n6xx_hal_uart.c`, `stm32n6xx_hal_uart_ex.c` 추가 ([11](11-project-skeleton.md#52-hal-소스를-glob-하면-안-된다))
-   - 호스트 쪽 포트는 `/dev/cu.usbmodem114102`
-2. BootROM 트레이스 파서 — `0x3410_37F0`(SEC) / `0x2410_77F0`(NSEC) 를 덮기 전에 읽어 출력
-3. 외부 NOR (XSPI2) — 여기서 `HAL_XSPI/BSEC` 재활성화, OTP `VDDIO3_HSLV` 판단 필요
-4. 서명 → 플래시 기록 → Flash boot 전환 (BOOT0=0, BOOT1=0)
-5. FSBL / Application 분리 (LRUN 또는 XIP)
+1. UART CLI 로 플래시 쓰기 (디버거 없이 펌웨어 교체)
+2. FSBL / Application 분리 (LRUN 또는 XIP)
 
 ## 문서 번호 규칙
 
@@ -63,7 +69,7 @@ cmake -S . -B build && cmake --build build -j8
 
 | 문서 | 내용 | 상태 |
 |---|---|---|
-| [10-dev-environment.md](10-dev-environment.md) | 툴체인 점검, CubeCLT 버전 선택, 보드 연결 확인 | ✅ |
+| [10-dev-environment.md](10-dev-environment.md) | 툴체인 점검, CubeCLT 설치/경로 규칙, 보드 연결 확인 | ✅ |
 | [11-project-skeleton.md](11-project-skeleton.md) | `stm32n6-fw` 디렉터리/CMake 구조, 링커·스타트업, 빌드·적재 방법 | ✅ |
 
 ### 구현 기록
@@ -71,9 +77,14 @@ cmake -S . -B build && cmake --build build -j8
 | 문서 | 기능 | 상태 |
 |---|---|---|
 | [20-led.md](20-led.md) | LED 구동 + 빌드/적재/검증 루프 확립 | ✅ |
-| `21-uart-cli.md` | UART(VCP) + 로그/CLI | 예정 |
-| `22-flash-boot.md` | 서명 → 외부 NOR 기록 → Flash boot 전환 | 예정 |
-| `23-app-split.md` | FSBL / Application 분리 (LRUN 또는 XIP) | 예정 |
+| [21-uart-cli.md](21-uart-cli.md) | UART(VCP) + 로그 + CLI, **DMA 수신과 D-캐시**, 로그 링 버퍼 | ✅ |
+| [22-cpu-800mhz.md](22-cpu-800mhz.md) | CPU 800 MHz (overdrive), 실측 793 MHz | ✅ |
+| [23-bootrom-trace.md](23-bootrom-trace.md) | BootROM 트레이스 파서 (직접 작성, 라이선스 이유) | ✅ |
+| [24-xspi-nor.md](24-xspi-nor.md) | 외부 NOR (XSPI2) OPI DTR 50 MHz, XIP ~100 MB/s, HSLV 퓨즈 안 태움 | ✅ |
+| [25-rtc-reset.md](25-rtc-reset.md) | RTC(LSE, 백업 레지스터) + 리셋 원인 / 재부팅 CLI | ✅ |
+| [26-flash-boot.md](26-flash-boot.md) | 서명 → 외부 로더로 NOR 기록 → Flash boot (`flash.py`, 태스크 `flash-ext`) | ✅ |
+| [27-swd-attach.md](27-swd-attach.md) | 돌고 있는 FSBL 에 디버거가 붙으면 멈추던 문제 — `SystemInit()` 의 SYSCFG 클럭 끄기 / `INITSVTORCR` | ✅ |
+| `28-app-split.md` | FSBL / Application 분리 (LRUN 또는 XIP) | 예정 |
 
 ## 그림
 
